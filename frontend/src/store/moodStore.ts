@@ -19,6 +19,7 @@ export interface Experience {
   mood_tags: string[];
   is_express?: boolean;
   is_home_activity?: boolean;
+  is_travel?: boolean;
 }
 
 interface MoodProfile {

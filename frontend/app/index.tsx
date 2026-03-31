@@ -21,6 +21,7 @@ export default function WelcomeScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
+        <Text style={styles.loadingLogo}>InnerGo</Text>
         <Text style={styles.loadingText}>Cargando...</Text>
       </View>
     );
@@ -29,7 +30,7 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <Image
-        source={{ uri: 'https://images.pexels.com/photos/18772173/pexels-photo-18772173.jpeg' }}
+        source={{ uri: 'https://images.unsplash.com/photo-1707249935951-d92bf3a65b00' }}
         style={styles.backgroundImage}
         resizeMode="cover"
       />
@@ -37,16 +38,16 @@ export default function WelcomeScreen() {
       
       <SafeAreaView style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.logo}>Numa</Text>
-          <Text style={styles.tagline}>Tu bienestar, tu camino</Text>
+          <Text style={styles.logo}>InnerGo</Text>
+          <Text style={styles.tagline}>Tu guía hacia el bienestar</Text>
         </View>
         
         <View style={styles.heroSection}>
           <Text style={styles.heroTitle}>
-            Descubre experiencias{"\n"}que transforman
+            Encuentra tu{"\n"}próxima experiencia
           </Text>
           <Text style={styles.heroSubtitle}>
-            Recomendaciones personalizadas según{"\n"}cómo te sientes hoy
+            Recomendaciones personalizadas{"\n"}según cómo te sientes hoy
           </Text>
         </View>
         
@@ -82,6 +83,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.background
   },
+  loadingLogo: {
+    fontSize: 36,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.primary,
+    marginBottom: SPACING.md
+  },
   loadingText: {
     fontSize: FONTS.sizes.lg,
     color: COLORS.textSecondary
@@ -93,7 +100,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)'
+    backgroundColor: 'rgba(0,0,0,0.35)'
   },
   content: {
     flex: 1,
@@ -105,10 +112,10 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xl
   },
   logo: {
-    fontSize: 48,
+    fontSize: 52,
     fontWeight: FONTS.weights.bold,
     color: COLORS.textWhite,
-    letterSpacing: 4
+    letterSpacing: 2
   },
   tagline: {
     fontSize: FONTS.sizes.md,

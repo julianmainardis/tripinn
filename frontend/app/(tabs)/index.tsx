@@ -21,13 +21,11 @@ export default function HomeScreen() {
   const [dailyQuote, setDailyQuote] = useState<{quote: string, author: string} | null>(null);
 
   useEffect(() => {
-    // Get daily quote - use local if API fails
     const fetchQuote = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/quote/daily`);
         setDailyQuote(response.data);
       } catch (error) {
-        // Fallback to local quotes
         const dayOfYear = new Date().getDate() % DAILY_QUOTES.length;
         setDailyQuote(DAILY_QUOTES[dayOfYear]);
       }
@@ -37,9 +35,7 @@ export default function HomeScreen() {
 
   const handleMoodSelect = async (moodId: string) => {
     if (!token) return;
-    
     setSelectedMood(moodId);
-    
     try {
       await analyzeMood(moodId, 0.7, token);
       router.push('/results');
@@ -59,19 +55,15 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.greeting}>{getGreeting()}, {user?.name?.split(' ')[0] || 'Viajero'}</Text>
           <Text style={styles.title}>¿Qué necesitas hoy?</Text>
         </View>
 
-        {/* Daily Quote */}
         {dailyQuote && (
           <View style={styles.quoteCard}>
-            <Ionicons name="sparkles" size={20} color={COLORS.accent} style={styles.quoteIcon} />
+            <Ionicons name="sunny" size={22} color={COLORS.accent} style={styles.quoteIcon} />
             <Text style={styles.quoteText}>"{dailyQuote.quote}"</Text>
             <Text style={styles.quoteAuthor}>— {dailyQuote.author}</Text>
           </View>
@@ -127,7 +119,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary
   },
   quoteCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: '#FFF8F0',
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.lg,
@@ -135,7 +127,7 @@ const styles = StyleSheet.create({
     borderLeftColor: COLORS.accent,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2
   },
