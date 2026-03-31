@@ -10,11 +10,12 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../src/constants/theme
 
 const CATEGORIES = [
   { id: 'all', name: 'Todos', icon: 'grid' },
+  { id: 'express', name: 'Express', icon: 'flash' },
+  { id: 'home', name: 'En Casa', icon: 'home' },
+  { id: 'couple', name: 'Pareja', icon: 'heart' },
   { id: 'nature', name: 'Naturaleza', icon: 'leaf' },
   { id: 'beach', name: 'Playa', icon: 'sunny' },
-  { id: 'mountain', name: 'Montaña', icon: 'triangle' },
-  { id: 'urban', name: 'Urbano', icon: 'business' },
-  { id: 'retreat', name: 'Retiro', icon: 'flower' }
+  { id: 'mountain', name: 'Montaña', icon: 'triangle' }
 ];
 
 export default function ExploreScreen() {
@@ -30,9 +31,18 @@ export default function ExploreScreen() {
     }
   }, [token]);
 
-  const filteredExperiences = selectedCategory === 'all'
-    ? allExperiences
-    : allExperiences.filter(exp => exp.category === selectedCategory);
+  const filteredExperiences = React.useMemo(() => {
+    if (selectedCategory === 'all') {
+      return allExperiences;
+    }
+    if (selectedCategory === 'express') {
+      return allExperiences.filter(exp => exp.is_express);
+    }
+    if (selectedCategory === 'home') {
+      return allExperiences.filter(exp => exp.is_home_activity);
+    }
+    return allExperiences.filter(exp => exp.category === selectedCategory);
+  }, [selectedCategory, allExperiences]);
 
   const isSaved = (experienceId: string) => {
     return savedExperiences.some(exp => exp.id === experienceId);
@@ -48,11 +58,30 @@ export default function ExploreScreen() {
     }
   };
 
+  const getCategoryDescription = () => {
+    switch (selectedCategory) {
+      case 'express':
+        return 'Planes rápidos en tu ciudad';
+      case 'home':
+        return 'Actividades para hacer en casa';
+      case 'couple':
+        return 'Experiencias románticas para dos';
+      case 'nature':
+        return 'Escapa a la naturaleza';
+      case 'beach':
+        return 'Relax junto al mar';
+      case 'mountain':
+        return 'Aventura en las alturas';
+      default:
+        return 'Descubre experiencias que transforman';
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Explorar</Text>
-        <Text style={styles.subtitle}>Descubre experiencias que transforman</Text>
+        <Text style={styles.subtitle}>{getCategoryDescription()}</Text>
       </View>
 
       <ScrollView

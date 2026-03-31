@@ -11,6 +11,7 @@ interface User {
   name: string;
   nationality: string;
   language: string;
+  city?: string;
 }
 
 interface AuthState {
@@ -19,7 +20,7 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, nationality: string, language: string) => Promise<void>;
+  register: (email: string, password: string, name: string, nationality: string, language: string, city?: string) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -45,14 +46,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (email: string, password: string, name: string, nationality: string, language: string) => {
+  register: async (email: string, password: string, name: string, nationality: string, language: string, city?: string) => {
     try {
       const response = await axios.post(`${API_URL}/api/auth/register`, {
         email,
         password,
         name,
         nationality,
-        language
+        language,
+        city: city || 'Tu ciudad'
       });
       const { token, user } = response.data;
       

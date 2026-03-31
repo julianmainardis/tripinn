@@ -17,6 +17,8 @@ export interface Experience {
   location: string;
   affiliate_link_placeholder: string;
   mood_tags: string[];
+  is_express?: boolean;
+  is_home_activity?: boolean;
 }
 
 interface MoodProfile {
@@ -26,11 +28,17 @@ interface MoodProfile {
   traveler_type: string;
 }
 
+interface DailyQuote {
+  quote: string;
+  author: string;
+}
+
 interface RecommendationResult {
   ai_message: string;
   quick_routine: string;
   experiences: Experience[];
   mood_profile: MoodProfile;
+  daily_quote?: DailyQuote;
 }
 
 interface MoodEntry {

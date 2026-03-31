@@ -41,38 +41,121 @@ export const LANGUAGES = [
 
 export const MOOD_OPTIONS = [
   {
-    id: 'stressed',
-    label: 'Saturado',
-    emoji: '😵',
-    color: '#FF6B6B',
-    description: 'Siento que necesito parar'
-  },
-  {
-    id: 'sad',
-    label: 'Bajo de ánimo',
-    emoji: '😔',
-    color: '#74B9FF',
-    description: 'Me siento decaído'
-  },
-  {
     id: 'need_change',
-    label: 'Necesito cambio',
-    emoji: '⚡',
+    label: 'Necesito un cambio',
+    emoji: '✨',
     color: '#FDCB6E',
-    description: 'Quiero algo diferente'
+    description: 'Quiero algo diferente en mi vida'
   },
   {
     id: 'disconnect',
     label: 'Quiero desconectar',
     emoji: '🌿',
     color: '#00B894',
-    description: 'Necesito escapar'
+    description: 'Necesito escapar de la rutina'
   },
   {
-    id: 'lost',
-    label: 'Me siento perdido',
-    emoji: '🌀',
+    id: 'adventure',
+    label: 'Ganas de aventura',
+    emoji: '🚀',
+    color: '#E17055',
+    description: 'Quiero vivir algo emocionante'
+  },
+  {
+    id: 'couple',
+    label: 'Planes de pareja',
+    emoji: '💕',
+    color: '#FD79A8',
+    description: 'Busco algo especial para dos'
+  },
+  {
+    id: 'indecisive',
+    label: 'No sé qué hacer',
+    emoji: '🤔',
     color: '#A29BFE',
-    description: 'No sé qué necesito'
+    description: 'Necesito que me ayudes a decidir'
+  }
+];
+
+export const DAILY_QUOTES = [
+  {
+    quote: "Quien mira hacia afuera, sueña; quien mira hacia adentro, despierta.",
+    author: "Carl Jung"
+  },
+  {
+    quote: "El éxito no es la clave de la felicidad. La felicidad es la clave del éxito.",
+    author: "Brian Tracy"
+  },
+  {
+    quote: "No es la montaña lo que conquistamos, sino a nosotros mismos.",
+    author: "Edmund Hillary"
+  },
+  {
+    quote: "La única manera de hacer un gran trabajo es amar lo que haces.",
+    author: "Steve Jobs"
+  },
+  {
+    quote: "Tu tarea no es buscar el amor, sino buscar y encontrar todas las barreras dentro de ti que has construido contra él.",
+    author: "Rumi"
+  },
+  {
+    quote: "El secreto del cambio es enfocar toda tu energía no en luchar contra lo viejo, sino en construir lo nuevo.",
+    author: "Sócrates"
+  },
+  {
+    quote: "La vida es lo que pasa mientras estás ocupado haciendo otros planes.",
+    author: "John Lennon"
+  },
+  {
+    quote: "Conocer a otros es inteligencia; conocerte a ti mismo es verdadera sabiduría.",
+    author: "Lao Tzu"
+  },
+  {
+    quote: "El mayor descubrimiento de mi generación es que un ser humano puede cambiar su vida cambiando su actitud.",
+    author: "William James"
+  },
+  {
+    quote: "No estamos hechos para el fracaso. El fracaso es simplemente el universo preparándote para algo mejor.",
+    author: "Oprah Winfrey"
+  },
+  {
+    quote: "La felicidad no es algo que pospones para el futuro; es algo que diseñas para el presente.",
+    author: "Jim Rohn"
+  },
+  {
+    quote: "El que tiene un porqué para vivir, puede soportar casi cualquier cómo.",
+    author: "Friedrich Nietzsche"
+  },
+  {
+    quote: "Tu mente es un jardín, tus pensamientos son las semillas. Puedes cultivar flores o puedes cultivar malas hierbas.",
+    author: "Proverbio"
+  },
+  {
+    quote: "El viaje de mil millas comienza con un solo paso.",
+    author: "Lao Tzu"
+  },
+  {
+    quote: "No te preocupes por los fracasos, preocúpate por las chances que pierdes cuando ni siquiera lo intentas.",
+    author: "Jack Canfield"
+  },
+  {
+    quote: "La mejor forma de predecir el futuro es creándolo.",
+    author: "Peter Drucker"
+  },
+  {
+    quote: "Nada en la vida debe ser temido, solo comprendido. Ahora es el momento de comprender más, para que podamos temer menos.",
+    author: "Marie Curie"
+  },
+  {
+    quote: "Lo que niegas te somete. Lo que aceptas te transforma.",
+    author: "Carl Jung"
+  },
+  {
+    quote: "El verdadero viaje de descubrimiento no consiste en buscar nuevos paisajes, sino en tener nuevos ojos.",
+    author: "Marcel Proust"
+  },
+  {
+    quote: "La paz viene de dentro. No la busques fuera.",
+    author: "Buda"
   }
 ];

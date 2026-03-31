@@ -56,6 +56,7 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/register')}
             size="large"
             style={styles.primaryButton}
+            textStyle={styles.primaryButtonText}
           />
           <Button
             title="Ya tengo cuenta"
@@ -139,6 +140,9 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: COLORS.textWhite
+  },
+  primaryButtonText: {
+    color: COLORS.primary
   },
   secondaryButton: {
     borderColor: COLORS.textWhite

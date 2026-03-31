@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +28,7 @@ export default function ResultsScreen() {
     );
   }
 
-  const { ai_message, quick_routine, experiences, mood_profile } = currentRecommendation;
+  const { ai_message, quick_routine, experiences, mood_profile, daily_quote } = currentRecommendation;
 
   const isSaved = (experienceId: string) => {
     return savedExperiences.some(exp => exp.id === experienceId);
@@ -48,6 +48,11 @@ export default function ResultsScreen() {
   const handleShare = () => {
     router.push('/share');
   };
+
+  // Separate experiences by type
+  const homeActivities = experiences.filter(exp => exp.is_home_activity);
+  const expressPlans = experiences.filter(exp => exp.is_express);
+  const travelExperiences = experiences.filter(exp => !exp.is_home_activity && !exp.is_express);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -78,34 +83,84 @@ export default function ResultsScreen() {
           <Text style={styles.aiMessage}>{ai_message}</Text>
         </View>
 
-        {/* Quick Routine */}
+        {/* Quick Routine - Make it actionable */}
         {quick_routine && (
           <View style={styles.routineCard}>
             <View style={styles.routineHeader}>
-              <Ionicons name="time-outline" size={20} color={COLORS.accent} />
-              <Text style={styles.routineTitle}>Rutina rápida</Text>
+              <Ionicons name="flash" size={20} color={COLORS.textWhite} />
+              <Text style={styles.routineTitle}>Hazlo ahora</Text>
             </View>
             <Text style={styles.routineText}>{quick_routine}</Text>
           </View>
         )}
 
-        {/* Recommended Experiences */}
-        <View style={styles.experiencesSection}>
-          <Text style={styles.sectionTitle}>Experiencias para ti</Text>
-          <Text style={styles.sectionSubtitle}>
-            Basadas en cómo te sientes ahora
-          </Text>
+        {/* Daily Quote if available */}
+        {daily_quote && (
+          <View style={styles.quoteCard}>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.accent} />
+            <Text style={styles.quoteText}>"{daily_quote.quote}"</Text>
+            <Text style={styles.quoteAuthor}>— {daily_quote.author}</Text>
+          </View>
+        )}
 
-          {experiences.map((experience) => (
-            <ExperienceCard
-              key={experience.id}
-              experience={experience}
-              onPress={() => router.push(`/experience/${experience.id}`)}
-              onSave={() => handleSave(experience.id)}
-              isSaved={isSaved(experience.id)}
-            />
-          ))}
-        </View>
+        {/* Home Activities Section */}
+        {homeActivities.length > 0 && (
+          <View style={styles.experiencesSection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="home" size={20} color={COLORS.primary} />
+              <Text style={styles.sectionTitle}>En casa</Text>
+            </View>
+            {homeActivities.map((experience) => (
+              <ExperienceCard
+                key={experience.id}
+                experience={experience}
+                onPress={() => router.push(`/experience/${experience.id}`)}
+                onSave={() => handleSave(experience.id)}
+                isSaved={isSaved(experience.id)}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* Express Plans Section */}
+        {expressPlans.length > 0 && (
+          <View style={styles.experiencesSection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="flash" size={20} color={COLORS.accent} />
+              <Text style={styles.sectionTitle}>Planes express</Text>
+            </View>
+            <Text style={styles.sectionSubtitle}>En tu ciudad, ahora mismo</Text>
+            {expressPlans.map((experience) => (
+              <ExperienceCard
+                key={experience.id}
+                experience={experience}
+                onPress={() => router.push(`/experience/${experience.id}`)}
+                onSave={() => handleSave(experience.id)}
+                isSaved={isSaved(experience.id)}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* Travel Experiences Section */}
+        {travelExperiences.length > 0 && (
+          <View style={styles.experiencesSection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="airplane" size={20} color={COLORS.primary} />
+              <Text style={styles.sectionTitle}>Escapadas</Text>
+            </View>
+            <Text style={styles.sectionSubtitle}>Para cuando quieras más</Text>
+            {travelExperiences.map((experience) => (
+              <ExperienceCard
+                key={experience.id}
+                experience={experience}
+                onPress={() => router.push(`/experience/${experience.id}`)}
+                onSave={() => handleSave(experience.id)}
+                isSaved={isSaved(experience.id)}
+              />
+            ))}
+          </View>
+        )}
 
         <Button
           title="Explorar más experiencias"
@@ -205,7 +260,7 @@ const styles = StyleSheet.create({
     lineHeight: 24
   },
   routineCard: {
-    backgroundColor: `${COLORS.accent}15`,
+    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.lg
@@ -217,27 +272,55 @@ const styles = StyleSheet.create({
   },
   routineTitle: {
     fontSize: FONTS.sizes.md,
-    fontWeight: FONTS.weights.semibold,
-    color: COLORS.accentDark,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.textWhite,
     marginLeft: SPACING.sm
   },
   routineText: {
     fontSize: FONTS.sizes.md,
-    color: COLORS.textPrimary,
+    color: COLORS.textWhite,
     lineHeight: 22
+  },
+  quoteCard: {
+    backgroundColor: `${COLORS.accent}15`,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.accent
+  },
+  quoteText: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textPrimary,
+    fontStyle: 'italic',
+    marginTop: SPACING.xs,
+    lineHeight: 20
+  },
+  quoteAuthor: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+    marginTop: SPACING.xs
   },
   experiencesSection: {
     marginBottom: SPACING.lg
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xs
+  },
   sectionTitle: {
-    fontSize: FONTS.sizes.xl,
+    fontSize: FONTS.sizes.lg,
     fontWeight: FONTS.weights.bold,
-    color: COLORS.textPrimary
+    color: COLORS.textPrimary,
+    marginLeft: SPACING.sm
   },
   sectionSubtitle: {
-    fontSize: FONTS.sizes.md,
+    fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.lg
+    marginBottom: SPACING.md,
+    marginLeft: 28
   },
   exploreButton: {
     marginBottom: SPACING.xl
