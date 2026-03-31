@@ -285,8 +285,14 @@ export default function ExperienceDetailScreen() {
       {!experience.is_home_activity && (
         <View style={styles.bottomCta}>
           <Button
-            title={experience.is_travel ? "Buscar opciones de viaje" : "¡Hazlo ahora!"}
-            onPress={handleBooking}
+            title={experience.is_travel ? "Buscar vuelos y hoteles" : "¡Hazlo ahora!"}
+            onPress={() => {
+              if (experience.is_travel) {
+                router.push('/travel-search');
+              } else {
+                handleBooking();
+              }
+            }}
             size="large"
             style={styles.bookButton}
           />

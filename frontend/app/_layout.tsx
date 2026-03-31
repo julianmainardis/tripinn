@@ -28,6 +28,7 @@ export default function RootLayout() {
         <Stack.Screen name="results" options={{ presentation: 'modal' }} />
         <Stack.Screen name="experience/[id]" />
         <Stack.Screen name="share" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="travel-search" options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );
