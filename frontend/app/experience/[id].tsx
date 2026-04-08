@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Linking, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Linking, Dimensions, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import * as Location from 'expo-location';
 import { useMoodStore, Experience } from '../../src/store/moodStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { Button } from '../../src/components/Button';
@@ -51,6 +52,54 @@ export default function ExperienceDetailScreen() {
   const [experience, setExperience] = useState<ExperienceWithRecommendations | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [locationError, setLocationError] = useState('');
+
+  const isNatureExperience = experience?.category === 'local_nature' || experience?.category === 'nature';
+
+  const getUserLocation = async () => {
+    setLocationLoading(true);
+    setLocationError('');
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError('Permite el acceso a tu ubicacion para buscar senderos cerca');
+        setLocationLoading(false);
+        return null;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      setUserLocation(coords);
+      setLocationLoading(false);
+      return coords;
+    } catch (err) {
+      setLocationError('No se pudo obtener tu ubicacion');
+      setLocationLoading(false);
+      return null;
+    }
+  };
+
+  const openMapSearch = async (searchQuery: string) => {
+    let coords = userLocation;
+    if (!coords) {
+      coords = await getUserLocation();
+    }
+
+    if (coords) {
+      // Google Maps search near user's location
+      const url = Platform.select({
+        ios: `maps://app?q=${encodeURIComponent(searchQuery)}&sll=${coords.lat},${coords.lng}&z=12`,
+        android: `geo:${coords.lat},${coords.lng}?q=${encodeURIComponent(searchQuery)}`,
+        default: `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}/@${coords.lat},${coords.lng},12z`
+      });
+      await Linking.openURL(url!);
+    } else {
+      // Fallback without location
+      const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
+      await Linking.openURL(url);
+    }
+  };
 
   useEffect(() => {
     const fetchExperience = async () => {
@@ -279,22 +328,113 @@ export default function ExperienceDetailScreen() {
               </Text>
             </View>
           )}
+
+          {/* Nature / Trails Map Section */}
+          {isNatureExperience && (
+            <View style={styles.mapSection}>
+              <Text style={styles.mapSectionTitle}>Encuentra senderos cerca de ti</Text>
+              <Text style={styles.mapSectionSubtitle}>
+                Usa tu ubicacion para descubrir rutas, bosques y senderos de trekking
+              </Text>
+
+              {locationError ? (
+                <View style={styles.locationErrorBox}>
+                  <Ionicons name="location-outline" size={18} color={COLORS.error} />
+                  <Text style={styles.locationErrorText}>{locationError}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.mapButtonsGrid}>
+                <TouchableOpacity
+                  style={styles.mapOptionCard}
+                  onPress={() => openMapSearch('senderos senderismo hiking trails')}
+                  disabled={locationLoading}
+                >
+                  {locationLoading ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <View style={[styles.mapOptionIcon, { backgroundColor: '#E8F5E9' }]}>
+                      <Ionicons name="trail-sign" size={24} color="#2E7D32" />
+                    </View>
+                  )}
+                  <Text style={styles.mapOptionLabel}>Senderos</Text>
+                  <Text style={styles.mapOptionDesc}>Rutas de senderismo</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.mapOptionCard}
+                  onPress={() => openMapSearch('bosques parques naturales forest')}
+                  disabled={locationLoading}
+                >
+                  <View style={[styles.mapOptionIcon, { backgroundColor: '#E0F2F1' }]}>
+                    <Ionicons name="leaf" size={24} color="#00695C" />
+                  </View>
+                  <Text style={styles.mapOptionLabel}>Bosques</Text>
+                  <Text style={styles.mapOptionDesc}>Parques y bosques</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.mapOptionCard}
+                  onPress={() => openMapSearch('rutas trekking montaña mountain trails')}
+                  disabled={locationLoading}
+                >
+                  <View style={[styles.mapOptionIcon, { backgroundColor: '#FFF3E0' }]}>
+                    <Ionicons name="trending-up" size={24} color="#E65100" />
+                  </View>
+                  <Text style={styles.mapOptionLabel}>Trekking</Text>
+                  <Text style={styles.mapOptionDesc}>Rutas de montaña</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.mapOptionCard}
+                  onPress={() => openMapSearch('miradores viewpoints nature')}
+                  disabled={locationLoading}
+                >
+                  <View style={[styles.mapOptionIcon, { backgroundColor: '#E3F2FD' }]}>
+                    <Ionicons name="eye" size={24} color="#1565C0" />
+                  </View>
+                  <Text style={styles.mapOptionLabel}>Miradores</Text>
+                  <Text style={styles.mapOptionDesc}>Vistas panoramicas</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.openFullMap}
+                onPress={() => openMapSearch('senderismo trekking bosques naturaleza')}
+              >
+                <Ionicons name="map" size={20} color={COLORS.textWhite} />
+                <Text style={styles.openFullMapText}>Abrir mapa completo</Text>
+                <Ionicons name="open-outline" size={16} color={COLORS.textWhite} />
+              </TouchableOpacity>
+
+              <View style={styles.locationTip}>
+                <Ionicons name="navigate-circle-outline" size={18} color={COLORS.accent} />
+                <Text style={styles.locationTipText}>
+                  Se usara tu ubicacion actual para mostrarte los lugares mas cercanos en Google Maps
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
-      {(!experience.is_home_activity || experience.id === 'exp-home-3') && (
+      {(!experience.is_home_activity || experience.id === 'exp-home-3' || isNatureExperience) && (
         <View style={styles.bottomCta}>
           <Button
             title={
               experience.id === 'exp-home-3'
                 ? "Empezar carrera"
-                : experience.is_travel
-                  ? "Buscar vuelos y hoteles"
-                  : "¡Hazlo ahora!"
+                : isNatureExperience
+                  ? "Buscar senderos cerca"
+                  : experience.is_travel
+                    ? "Buscar vuelos y hoteles"
+                    : "¡Hazlo ahora!"
             }
             onPress={() => {
               if (experience.id === 'exp-home-3') {
                 router.push('/running-timer');
+              } else if (isNatureExperience) {
+                openMapSearch('senderos senderismo hiking trails naturaleza');
               } else if (experience.is_travel) {
                 router.push('/travel-search');
               } else {
@@ -325,7 +465,7 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: FONTS.sizes.xxl, fontWeight: FONTS.weights.bold, color: COLORS.textWhite, marginBottom: SPACING.xs },
   locationRow: { flexDirection: 'row', alignItems: 'center' },
   locationText: { fontSize: FONTS.sizes.md, color: COLORS.textWhite, marginLeft: 4 },
-  content: { padding: SPACING.lg, paddingBottom: 100 },
+  content: { padding: SPACING.lg, paddingBottom: 140 },
   quickInfo: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.lg, shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   infoItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   infoText: { fontSize: FONTS.sizes.sm, color: COLORS.textPrimary, marginLeft: SPACING.xs },
@@ -356,5 +496,41 @@ const styles = StyleSheet.create({
   demoNote: { flexDirection: 'row', backgroundColor: COLORS.backgroundDark, borderRadius: BORDER_RADIUS.md, padding: SPACING.md, marginTop: SPACING.md },
   demoNoteText: { flex: 1, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginLeft: SPACING.sm, lineHeight: 20 },
   bottomCta: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.cardBackground, padding: SPACING.lg, paddingBottom: SPACING.xl, borderTopWidth: 1, borderTopColor: COLORS.border },
-  bookButton: { width: '100%' }
+  bookButton: { width: '100%' },
+  // Nature map styles
+  mapSection: {
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg, marginTop: SPACING.lg,
+    shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2
+  },
+  mapSectionTitle: { fontSize: FONTS.sizes.lg, fontWeight: FONTS.weights.bold, color: COLORS.textPrimary },
+  mapSectionSubtitle: { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.xs, marginBottom: SPACING.lg },
+  locationErrorBox: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFE8E8',
+    borderRadius: BORDER_RADIUS.md, padding: SPACING.sm, marginBottom: SPACING.md
+  },
+  locationErrorText: { fontSize: FONTS.sizes.sm, color: COLORS.error, marginLeft: SPACING.xs, flex: 1 },
+  mapButtonsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  mapOptionCard: {
+    width: '48%', backgroundColor: COLORS.backgroundDark, borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md, alignItems: 'center', marginBottom: SPACING.xs
+  },
+  mapOptionIcon: {
+    width: 48, height: 48, borderRadius: 24, justifyContent: 'center',
+    alignItems: 'center', marginBottom: SPACING.xs
+  },
+  mapOptionLabel: { fontSize: FONTS.sizes.md, fontWeight: FONTS.weights.semibold, color: COLORS.textPrimary },
+  mapOptionDesc: { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginTop: 2, textAlign: 'center' },
+  openFullMap: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, marginTop: SPACING.md, gap: SPACING.sm
+  },
+  openFullMapText: { fontSize: FONTS.sizes.md, fontWeight: FONTS.weights.bold, color: COLORS.textWhite },
+  locationTip: {
+    flexDirection: 'row', backgroundColor: '#FFF8F0', borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm, marginTop: SPACING.md
+  },
+  locationTipText: { flex: 1, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginLeft: SPACING.xs, lineHeight: 16 }
 });
