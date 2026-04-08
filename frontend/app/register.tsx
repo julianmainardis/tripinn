@@ -46,15 +46,19 @@ export default function RegisterScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const [registerError, setRegisterError] = useState('');
+
   const handleRegister = async () => {
     if (!validate()) return;
     
     setLoading(true);
+    setRegisterError('');
     try {
       await register(email.trim(), password, name.trim(), nationality, language);
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      const msg = error.message || 'Error al registrarse';
+      setRegisterError(msg);
     } finally {
       setLoading(false);
     }
@@ -206,6 +210,12 @@ export default function RegisterScreen() {
               )}
             </View>
 
+            {registerError ? (
+              <View style={styles.registerErrorBox}>
+                <Text style={styles.registerErrorText}>{registerError}</Text>
+              </View>
+            ) : null}
+
             <Button
               title="Crear cuenta"
               onPress={handleRegister}
@@ -325,6 +335,17 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     marginTop: SPACING.md
+  },
+  registerErrorBox: {
+    backgroundColor: '#FFE8E8',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm
+  },
+  registerErrorText: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.error,
+    textAlign: 'center'
   },
   footer: {
     paddingTop: SPACING.xl,
