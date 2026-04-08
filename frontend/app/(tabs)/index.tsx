@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,9 +15,10 @@ const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBL
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, token } = useAuthStore();
+  const { user, token, logout } = useAuthStore();
   const { analyzeMood, isLoading } = useMoodStore();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dailyQuote, setDailyQuote] = useState<{quote: string, author: string} | null>(null);
 
   useEffect(() => {
@@ -34,13 +35,27 @@ export default function HomeScreen() {
   }, []);
 
   const handleMoodSelect = async (moodId: string) => {
-    if (!token) return;
+    if (!token) {
+      // No token - redirect to login
+      await logout();
+      router.replace('/login');
+      return;
+    }
     setSelectedMood(moodId);
+    setErrorMsg(null);
     try {
       await analyzeMood(moodId, 0.7, token);
       router.push('/results');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error analyzing mood:', error);
+      const msg = error?.message || '';
+      if (msg.includes('401') || msg.includes('Token') || msg.includes('inválido') || msg.includes('expirado')) {
+        // Token expired or invalid - force re-login
+        await logout();
+        router.replace('/login');
+      } else {
+        setErrorMsg('No se pudo analizar. Intenta de nuevo.');
+      }
     } finally {
       setSelectedMood(null);
     }
@@ -85,6 +100,13 @@ export default function HomeScreen() {
             />
           ))}
         </View>
+
+        {errorMsg && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={18} color={COLORS.error} />
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        )}
 
         {isLoading && (
           <View style={styles.loadingContainer}>
@@ -162,5 +184,19 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     fontSize: FONTS.sizes.md,
     color: COLORS.textSecondary
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFE8E8',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md
+  },
+  errorText: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.error,
+    marginLeft: SPACING.sm,
+    flex: 1
   }
 });

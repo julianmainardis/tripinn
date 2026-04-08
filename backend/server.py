@@ -582,6 +582,12 @@ async def get_me(user: dict = Depends(get_current_user)):
     return {"id": user["id"], "email": user["email"], "name": user["name"],
             "nationality": user["nationality"], "language": user["language"], "city": user.get("city", "Tu ciudad")}
 
+@api_router.get("/auth/profile")
+async def get_profile(user: dict = Depends(get_current_user)):
+    return {"id": user["id"], "email": user["email"], "name": user["name"],
+            "nationality": user["nationality"], "language": user["language"], "city": user.get("city", "Tu ciudad")}
+
+
 @api_router.put("/auth/profile")
 async def update_profile(update: UserProfileUpdate, user: dict = Depends(get_current_user)):
     update_data = {k: v for k, v in update.dict().items() if v is not None}
