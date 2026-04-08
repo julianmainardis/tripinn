@@ -282,12 +282,20 @@ export default function ExperienceDetailScreen() {
         </View>
       </ScrollView>
 
-      {!experience.is_home_activity && (
+      {(!experience.is_home_activity || experience.id === 'exp-home-3') && (
         <View style={styles.bottomCta}>
           <Button
-            title={experience.is_travel ? "Buscar vuelos y hoteles" : "¡Hazlo ahora!"}
+            title={
+              experience.id === 'exp-home-3'
+                ? "Empezar carrera"
+                : experience.is_travel
+                  ? "Buscar vuelos y hoteles"
+                  : "¡Hazlo ahora!"
+            }
             onPress={() => {
-              if (experience.is_travel) {
+              if (experience.id === 'exp-home-3') {
+                router.push('/running-timer');
+              } else if (experience.is_travel) {
                 router.push('/travel-search');
               } else {
                 handleBooking();
