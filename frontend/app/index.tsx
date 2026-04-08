@@ -21,7 +21,7 @@ export default function WelcomeScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingLogo}>InnerGo</Text>
+        <Text style={styles.loadingLogo}>TripInn</Text>
         <Text style={styles.loadingText}>Cargando...</Text>
       </View>
     );
@@ -38,7 +38,7 @@ export default function WelcomeScreen() {
       
       <SafeAreaView style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.logo}>InnerGo</Text>
+          <Text style={styles.logo}>TripInn</Text>
           <Text style={styles.tagline}>Tu guía hacia el bienestar</Text>
         </View>
         

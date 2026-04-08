@@ -83,7 +83,7 @@ export default function ShareScreen() {
       <View style={styles.content}>
         <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1 }} style={styles.shareCard}>
           <View style={styles.cardContent}>
-            <Text style={styles.cardLogo}>InnerGo</Text>
+            <Text style={styles.cardLogo}>TripInn</Text>
             <Text style={styles.cardGreeting}>El perfil emocional de</Text>
             <Text style={styles.cardName}>{user?.name || 'Viajero'}</Text>
 
@@ -105,7 +105,7 @@ export default function ShareScreen() {
               ))}
             </View>
 
-            <Text style={styles.cardCta}>Descubre qué experiencias te recomienda InnerGo</Text>
+            <Text style={styles.cardCta}>Descubre qué experiencias te recomienda TripInn</Text>
           </View>
         </ViewShot>
 
