@@ -464,6 +464,14 @@ DEMO_EXPERIENCES = [
         "location": "Destinos románticos", "affiliate_link_placeholder": "", "mood_tags": ["couple"],
         "is_express": False, "is_home_activity": False, "is_travel": True
     },
+    # Cultural escape
+    {
+        "id": "exp-5", "title": "Escapada a Nuevas Culturas", "description": "Sumérgete en tradiciones, gastronomía y costumbres de otros lugares. Descubre mercados locales, museos y barrios con historia.",
+        "short_description": "Descubre nuevas tradiciones", "category": "urban", "tags": ["cultura", "gastronomía", "historia"],
+        "image_url": "https://images.unsplash.com/photo-1533105079780-92b9be482077", "duration": "3-5 días",
+        "location": "Ciudades con historia", "affiliate_link_placeholder": "", "mood_tags": ["need_change", "adventure", "disconnect"],
+        "is_express": False, "is_home_activity": False, "is_travel": True
+    },
     # Local nature
     {
         "id": "exp-local-1", "title": "Descubre un Sendero Local", "description": "Explora rutas de senderismo cerca de tu ciudad.",
