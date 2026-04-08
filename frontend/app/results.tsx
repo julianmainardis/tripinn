@@ -94,14 +94,6 @@ export default function ResultsScreen() {
           </View>
         )}
 
-        {/* Daily Quote if available */}
-        {daily_quote && (
-          <View style={styles.quoteCard}>
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color={COLORS.accent} />
-            <Text style={styles.quoteText}>"{daily_quote.quote}"</Text>
-            <Text style={styles.quoteAuthor}>— {daily_quote.author}</Text>
-          </View>
-        )}
 
         {/* Home Activities Section */}
         {homeActivities.length > 0 && (
