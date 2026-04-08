@@ -93,6 +93,7 @@ export default function HomeScreen() {
               id={mood.id}
               label={mood.label}
               emoji={mood.emoji}
+              icon={mood.icon}
               color={mood.color}
               description={mood.description}
               onPress={handleMoodSelect}

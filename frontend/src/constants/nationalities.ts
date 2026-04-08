@@ -44,6 +44,7 @@ export const MOOD_OPTIONS = [
     id: 'need_change',
     label: 'Necesito un cambio',
     emoji: '✨',
+    icon: 'flash',
     color: '#FDCB6E',
     description: 'Quiero algo diferente en mi vida'
   },
@@ -51,6 +52,7 @@ export const MOOD_OPTIONS = [
     id: 'disconnect',
     label: 'Quiero desconectar',
     emoji: '🌿',
+    icon: 'leaf',
     color: '#00B894',
     description: 'Necesito escapar de la rutina'
   },
@@ -58,6 +60,7 @@ export const MOOD_OPTIONS = [
     id: 'adventure',
     label: 'Ganas de aventura',
     emoji: '🚀',
+    icon: 'compass',
     color: '#E17055',
     description: 'Quiero vivir algo emocionante'
   },
@@ -65,6 +68,7 @@ export const MOOD_OPTIONS = [
     id: 'couple',
     label: 'Planes de pareja',
     emoji: '💕',
+    icon: 'heart',
     color: '#FD79A8',
     description: 'Busco algo especial para dos'
   },
@@ -72,6 +76,7 @@ export const MOOD_OPTIONS = [
     id: 'indecisive',
     label: 'No sé qué hacer',
     emoji: '🤔',
+    icon: 'bulb',
     color: '#A29BFE',
     description: 'Necesito que me ayudes a decidir'
   }
