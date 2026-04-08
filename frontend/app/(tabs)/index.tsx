@@ -12,6 +12,7 @@ import { MOOD_OPTIONS, DAILY_QUOTES } from '../../src/constants/nationalities';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
 
 const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const OLIVE = '#6B7F3B';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -78,7 +79,7 @@ export default function HomeScreen() {
 
         {dailyQuote && (
           <View style={styles.quoteCard}>
-            <Ionicons name="sunny" size={22} color={COLORS.accent} style={styles.quoteIcon} />
+            <Ionicons name="sunny" size={22} color={OLIVE} style={styles.quoteIcon} />
             <Text style={styles.quoteText}>"{dailyQuote.quote}"</Text>
             <Text style={styles.quoteAuthor}>— {dailyQuote.author}</Text>
           </View>
@@ -120,6 +121,9 @@ export default function HomeScreen() {
   );
 }
 
+const OLIVE_LIGHT = '#E8EDDC';
+const OLIVE_SOFT = '#F4F6EE';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -133,7 +137,8 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    color: OLIVE,
+    fontWeight: FONTS.weights.medium,
     marginBottom: SPACING.xs
   },
   title: {
@@ -142,12 +147,12 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary
   },
   quoteCard: {
-    backgroundColor: '#FFF8F0',
+    backgroundColor: OLIVE_SOFT,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.lg,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.accent,
+    borderLeftColor: OLIVE,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -166,13 +171,15 @@ const styles = StyleSheet.create({
   },
   quoteAuthor: {
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'right'
+    color: OLIVE,
+    textAlign: 'right',
+    fontWeight: FONTS.weights.medium
   },
   subtitle: {
     fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.md
+    color: OLIVE,
+    marginBottom: SPACING.md,
+    fontWeight: FONTS.weights.medium
   },
   moodList: {
     gap: SPACING.sm
@@ -184,7 +191,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: SPACING.md,
     fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary
+    color: OLIVE
   },
   errorContainer: {
     flexDirection: 'row',
