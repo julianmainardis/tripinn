@@ -3,16 +3,14 @@ import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Linking, D
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { useMoodStore, Experience } from '../../src/store/moodStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { Button } from '../../src/components/Button';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
+import { tripsApi } from '../../src/features/trips/api/tripsApi';
 
 const { width, height } = Dimensions.get('window');
-const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 interface MovieRecommendation {
   title: string;
@@ -104,7 +102,7 @@ export default function ExperienceDetailScreen() {
   useEffect(() => {
     const fetchExperience = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/experiences/${id}`);
+        const response = await tripsApi.getExperience(id);
         setExperience(response.data);
       } catch (error) {
         console.error('Error fetching experience:', error);

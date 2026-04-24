@@ -7,13 +7,10 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
 import { useAuthStore } from '../src/store/authStore';
 import { Button } from '../src/components/Button';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../src/constants/theme';
-
-const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+import { tripsApi } from '../src/features/trips/api/tripsApi';
 
 // ==================== TYPES ====================
 
@@ -369,9 +366,7 @@ export default function TravelSearchScreen() {
     searchTimeout.current = setTimeout(async () => {
       setAirportLoading(true);
       try {
-        const response = await axios.get(`${API_URL}/api/airports/search`, {
-          params: { query: text }
-        });
+        const response = await tripsApi.airportSearch(text);
         setAirportResults(response.data);
         setShowAirportDropdown(response.data.length > 0);
       } catch (err) {
@@ -439,8 +434,7 @@ export default function TravelSearchScreen() {
     setResults(null);
 
     try {
-      const response = await axios.post(
-        `${API_URL}/api/travel/search`,
+      const response = await tripsApi.searchTravel(
         {
           origin_code: selectedAirport.code,
           origin_city: selectedAirport.city,
@@ -449,7 +443,7 @@ export default function TravelSearchScreen() {
           date_to: formatDateAPI(dateTo),
           adults: adults
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        token ?? ''
       );
       setResults(response.data);
     } catch (err: any) {

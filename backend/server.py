@@ -14,12 +14,12 @@ import bcrypt
 import jwt
 import random
 from urllib.parse import quote
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+import uvicorn
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'tripinn_db')]
 
@@ -27,7 +27,6 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'tripinn-secret-key-2024-secure')
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24 * 7
 
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 # Future API Keys placeholders
 SKYSCANNER_API_KEY = os.environ.get('SKYSCANNER_API_KEY', '')
@@ -628,24 +627,8 @@ async def analyze_mood(mood_input: MoodInput, user: dict = Depends(get_current_u
     
     daily_quote = get_daily_quote()
     user_city = user.get("city", "tu ciudad")
-    ai_message, quick_routine = "", ""
-    
-    if EMERGENT_LLM_KEY:
-        try:
-            chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"tripinn-{user['id']}-{datetime.utcnow().timestamp()}",
-                system_message=f"Eres TripInn, asistente de bienestar cálido. Usuario vive en {user_city}. Responde en español, breve y positivo. Sin markdown."
-            ).with_model("openai", "gpt-4o")
-            prompt = f"Usuario se siente: {MOOD_TRANSLATIONS.get(mood_input.mood, mood_input.mood)}. Ciudad: {user_city}\nDa mensaje motivador (2 frases) y actividad rápida (20 min).\nFormato:\nMENSAJE: [texto]\nRUTINA: [actividad] - [cómo]"
-            response = await chat.send_message(UserMessage(text=prompt))
-            for line in response.strip().split('\n'):
-                if line.startswith('MENSAJE:'): ai_message = line.replace('MENSAJE:', '').strip()
-                elif line.startswith('RUTINA:'): quick_routine = line.replace('RUTINA:', '').strip()
-        except Exception as e:
-            logger.error(f"AI error: {e}")
-    
-    if not ai_message:
-        ai_message = "¡Hoy es un gran día para hacer algo diferente!"
-        quick_routine = "Sal a dar un paseo de 10 minutos sin móvil."
+    ai_message = "¡Hoy es un gran día para hacer algo diferente!"
+    quick_routine = "Sal a dar un paseo de 10 minutos sin móvil."
     
     return {"ai_message": ai_message, "quick_routine": quick_routine, "experiences": matching_experiences,
             "mood_profile": {"current_mood": mood_input.mood, "mood_label": MOOD_TRANSLATIONS.get(mood_input.mood, mood_input.mood),
@@ -759,3 +742,7 @@ async def startup_db_client():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+
+if __name__ == "__main__":
+    uvicorn.run("server:app", host="0.0.0.0", port=int(os.environ.get("PORT", "8000")), reload=True)

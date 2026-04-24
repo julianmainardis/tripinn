@@ -3,15 +3,13 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 're
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
 import { useAuthStore } from '../../src/store/authStore';
 import { useMoodStore } from '../../src/store/moodStore';
 import { MoodCard } from '../../src/components/MoodCard';
 import { MOOD_OPTIONS, DAILY_QUOTES } from '../../src/constants/nationalities';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../src/constants/theme';
+import { tripsApi } from '../../src/features/trips/api/tripsApi';
 
-const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const OLIVE = '#6B7F3B';
 
 export default function HomeScreen() {
@@ -25,7 +23,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchQuote = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/quote/daily`);
+        const response = await tripsApi.dailyQuote();
         setDailyQuote(response.data);
       } catch (error) {
         const dayOfYear = new Date().getDate() % DAILY_QUOTES.length;
