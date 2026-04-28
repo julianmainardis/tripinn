@@ -39,15 +39,12 @@ export default function WelcomeScreen() {
       <SafeAreaView style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.logo}>TripInn</Text>
-          <Text style={styles.tagline}>Tu guía hacia el bienestar</Text>
+          <Text style={styles.tagline}>Descubre algo nuevo hoy</Text>
         </View>
         
         <View style={styles.heroSection}>
           <Text style={styles.heroTitle}>
             Encuentra tu{"\n"}próxima experiencia
-          </Text>
-          <Text style={styles.heroSubtitle}>
-            Recomendaciones personalizadas{"\n"}según cómo te sientes hoy
           </Text>
         </View>
         
