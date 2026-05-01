@@ -1,6 +1,0 @@
-fastapi
-uvicorn[standard]
-python-dotenv
-motor
-bcrypt
-PyJWT

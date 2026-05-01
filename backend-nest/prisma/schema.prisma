@@ -18,5 +18,29 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  moodEntries        MoodEntry[]
+  savedExperiences   SavedExperience[]
+
   @@map("users")
+}
+
+model MoodEntry {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  mood      String
+  intensity Float    @default(0.5)
+  timestamp DateTime @default(now())
+
+  @@map("mood_entries")
+}
+
+model SavedExperience {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id])
+  experienceId String   @map("experience_id")
+  savedAt      DateTime @default(now()) @map("saved_at")
+
+  @@map("saved_experiences")
 }

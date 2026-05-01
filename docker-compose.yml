@@ -1,12 +1,16 @@
 services:
-  mongo:
-    image: mongo:7
-    container_name: tripinn-mongo
+  postgres:
+    image: postgres:17-alpine
+    container_name: tripinn-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tripinn
     ports:
-      - "27017:27017"
+      - "5432:5432"
     volumes:
-      - tripinn_mongo_data:/data/db
+      - tripinn_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
 volumes:
-  tripinn_mongo_data:
+  tripinn_postgres_data:

@@ -271,7 +271,7 @@ class TripInnAPITester:
                 
                 # Check budget logic (flights <= 50%, hotels <= 10% per night)
                 max_budget = search_request["max_budget"]
-                max_flight_budget = max_budget * 0.5
+                max_flight_budget = max_budget * 0.3
                 max_hotel_per_night = max_budget * 0.1
                 
                 budget_logic_valid = True

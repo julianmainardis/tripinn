@@ -9,29 +9,17 @@ node_modules/
 /node_modules
 /.pnp
 .pnp.js
-.yarn/install-state.gz
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
 # Testing
 /coverage
 
-# Next.js
-/.next/
-/out/
-next-env.d.ts
-*.tsbuildinfo
-
 # Production builds
 /build
 dist/
-dist
 
-# Environment files (comprehensive coverage)
-
+# Environment files
+*.env
+*.env.*
 *token.json*
 *credentials.json*
 
@@ -48,7 +36,7 @@ dump.rdb
 
 # Python
 __pycache__/
-*pyc*
+*.pyc
 venv/
 .venv/
 
@@ -75,19 +63,27 @@ agenthub/agents/youtube/db
 
 # Build caches
 .cache/
+.metro-cache/
+*.tsbuildinfo
 
+# Expo / React Native
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Metro
+.cache/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Memory
 memory/test_credentials.md
-
-# Mobile development
-android-sdk/-e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*

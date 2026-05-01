@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="$ROOT_DIR/backend"
+BACKEND_DIR="$ROOT_DIR/backend-nest"
 FRONTEND_DIR="$ROOT_DIR/frontend"
 
 BACKEND_PID=""
@@ -25,22 +25,23 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Starting MongoDB container..."
+echo "==> Starting PostgreSQL container..."
 cd "$ROOT_DIR"
-docker compose up -d mongo
+docker compose up -d postgres
 
 echo "==> Preparing backend..."
 cd "$BACKEND_DIR"
-python3 -m venv .venv
-source .venv/bin/activate
 if [[ ! -f ".env" ]]; then
   cp .env.example .env
 fi
-python -m pip install --upgrade pip >/dev/null
-pip install -r requirements.txt >/dev/null
+if [[ ! -d "node_modules" ]]; then
+  npm install
+fi
+npx prisma generate
+npx prisma migrate deploy
 
-echo "==> Starting backend on http://127.0.0.1:8000 ..."
-python server.py &
+echo "==> Starting NestJS backend on http://127.0.0.1:8000 ..."
+npm run start:dev &
 BACKEND_PID=$!
 
 echo "==> Preparing frontend..."
@@ -57,8 +58,8 @@ npx expo start --ios -c
 
 echo ""
 echo "All services started."
-echo "- MongoDB: docker container 'tripinn-mongo'"
-echo "- Backend:  http://127.0.0.1:8000"
-echo "- Expo:     waiting on http://localhost:8081"
+echo "- PostgreSQL: docker container 'tripinn-postgres'"
+echo "- Backend:    http://127.0.0.1:8000"
+echo "- Expo:       waiting on http://localhost:8081"
 echo ""
 echo "Press Ctrl+C here to stop backend."
