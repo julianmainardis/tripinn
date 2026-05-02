@@ -5,7 +5,7 @@ import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TripsModule } from './modules/trips/trips.module';
-import { AmadeusModule } from './modules/amadeus/amadeus.module';
+import { DuffelModule } from './modules/duffel/duffel.module';
 import { ExperiencesModule } from './modules/experiences/experiences.module';
 import { MoodModule } from './modules/mood/mood.module';
 import { SavedModule } from './modules/saved/saved.module';
@@ -16,7 +16,7 @@ import { SavedModule } from './modules/saved/saved.module';
     HttpModule,
     PrismaModule,
     AuthModule,
-    AmadeusModule,
+    DuffelModule,
     TripsModule,
     ExperiencesModule,
     MoodModule,

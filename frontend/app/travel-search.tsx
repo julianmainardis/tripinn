@@ -637,7 +637,7 @@ export default function TravelSearchScreen() {
             <View style={styles.infoBox}>
               <Ionicons name="information-circle-outline" size={18} color={COLORS.accent} />
               <Text style={styles.infoText}>
-                Buscamos vuelos (max 50% del presupuesto) y hoteles (max 10% por noche). Los enlaces te llevan a Skyscanner y Booking para ver precios reales.
+                Buscamos vuelos con Duffel y hoteles con Booking. Los enlaces te llevan a Skyscanner y Booking para reservar directamente a los mejores precios.
               </Text>
             </View>
           </View>

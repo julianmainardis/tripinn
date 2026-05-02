@@ -15,7 +15,7 @@ tripinn/
       modules/
         auth/                   # Auth (register, login, profile)
           auth.module.ts        # DTOs, Service, JWT Strategy, Controller
-        trips/                  # Trip search con Amadeus
+        trips/                  # Trip search con Duffel + CJ
           trips.module.ts       # DTOs, Service, Controller
         experiences/            # Experiencias + quotes + recomendaciones
           experiences.module.ts # Static data + endpoints
@@ -23,8 +23,13 @@ tripinn/
           mood.module.ts        # DTOs, Service, Controller
         saved/                  # Saved experiences
           saved.module.ts       # Service, Controller
-        amadeus/                # Amadeus API integration
-          amadeus.module.ts     # OAuth2, flights, hotels, airports
+        duffel/                 # Duffel API integration (vuelos)
+          duffel.module.ts      # DuffelService, types
+          duffel.service.ts     # Offer requests, flight search
+          duffel.types.ts       # Duffel API types
+        cj/                     # CJ Affiliate integration (Booking.com)
+          cj.module.ts          # CJService
+          cj.service.ts         # Affiliate link generation
   frontend/
     app/                        # Expo Router routes
     src/
@@ -51,9 +56,10 @@ tripinn/
 
 ## Module conventions
 
-- One domain per module (`auth`, `trips`, `experiences`, `mood`, `saved`, `amadeus`)
-- `amadeus`: external API integration (OAuth2 token management, HTTP calls)
-- `trips`: uses Amadeus for real flight/hotel prices, local airport DB as fallback
+- One domain per module (`auth`, `trips`, `experiences`, `mood`, `saved`, `duffel`, `cj`)
+- `duffel`: external API integration for flight pricing (Offer Requests API v2)
+- `cj`: CJ Affiliate link generation for Booking.com hotels
+- `trips`: uses Duffel for real flight prices, CJ for hotel affiliate links, local airport DB as fallback
 - Avoid direct DB access from controllers; only use services
 - Static content (experiences, quotes, recommendations) served from in-memory constants
 
@@ -68,15 +74,31 @@ tripinn/
 - Mood: `POST /api/mood/analyze`, `GET /api/mood/history`, `GET /api/mood/profile` (JWT)
 - Saved: `GET/POST/DELETE /api/saved`, `GET /api/saved/check/:id` (JWT)
 
-## Amadeus Integration
+## Duffel Integration (Vuelos)
 
-- **Auth**: OAuth2 client credentials, token cached with 60s safety margin
-- **Flights**: `GET /v2/shopping/flight-offers` — real-time pricing
-- **Hotels**: `GET /v3/shopping/hotel-offers` — real-time pricing
-- **Airports**: `GET /v1/reference-data/locations` — real airport search
-- **Inspiration**: `GET /v1/shopping/flight-destinations` — cheap destinations
-- Test env: `https://test.api.amadeus.com` (free quota, cached data)
-- Prod env: `https://api.amadeus.com` (real-time, pay-as-you-go)
+- **Auth**: Bearer token via `DUFFEL_ACCESS_TOKEN`
+- **Flight Search**: `POST /air/offer_requests?return_offers=true` — creates offer request with slices (outbound + return)
+- **API Version**: `v2` (header `Duffel-Version: v2`)
+- **Response**: Array of `Offer` objects with `total_amount`, `slices`, `segments`
+- **Cabin class**: economy (configurable)
+- Test env: `https://api.duffel.com` (sandbox with `duffel_test_*` tokens)
+- Prod env: same URL with `duffel_live_*` tokens
+
+## CJ Affiliate Integration (Hoteles)
+
+- **Publisher ID**: `CJ_PUBLISHER_ID` (7934409)
+- **Link Search API**: `CJ_API_TOKEN` + `CJ_WEBSITE_ID` for automatic link ID discovery
+- **Deep links**: `anrdoezrs.net/click-{PID}-{linkId}?url={encodedBookingUrl}` (direct, no intermediary page)
+- **Fallback**: `anrdoezrs.net/links/{PID}/type/dlg/{bookingUrl}` (with intermediary page)
+- **Booking.com CID**: 17259345
+
+## Travel Search Logic
+
+- **Flight budget**: max 30% of total user budget (not per person)
+- **Hotel budget**: max 10% of total budget per night
+- **Destinations**: 5-8 most relevant destinations from origin (geographic proximity)
+- **Parallel search**: Duffel calls made in parallel per destination
+- **Fallback**: if Duffel fails for a destination, uses estimated pricing
 
 ## Frontend conventions
 
@@ -90,4 +112,4 @@ tripinn/
 - PostgreSQL via Docker Compose
 - Prisma ORM for database access
 - JWT authentication (7-day expiry)
-- Environment variables: `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET`
+- Environment variables: `DUFFEL_ACCESS_TOKEN`, `CJ_PUBLISHER_ID`, `CJ_API_TOKEN`, `CJ_WEBSITE_ID`

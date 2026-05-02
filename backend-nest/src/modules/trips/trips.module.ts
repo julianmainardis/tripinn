@@ -12,11 +12,7 @@ import {
 } from '@nestjs/common';
 import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { AuthGuard } from '@nestjs/passport';
-import {
-  AmadeusModule,
-  AmadeusService,
-  AmadeusLocation,
-} from '../amadeus/amadeus.module';
+import { DuffelModule, DuffelService } from '../duffel/duffel.module';
 import { CJModule, CJService } from '../cj/cj.module';
 
 type Airport = { code: string; city: string; country: string; name: string };
@@ -155,6 +151,12 @@ const AIRPORTS: Airport[] = [
   { code: 'GRU', city: 'São Paulo', country: 'Brasil', name: 'Guarulhos' },
 ];
 
+const AIRPORT_REGIONS: Record<string, number[]> = {
+  MAD: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
+  BCN: [1, 2, 3, 4, 5, 6, 7, 0, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
+  LIS: [10, 0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
+};
+
 class TravelSearchDto {
   @IsString() origin_code!: string;
   @IsString() origin_city!: string;
@@ -167,8 +169,12 @@ class TravelSearchDto {
 
 @Injectable()
 export class TripsService {
+  private readonly MAX_FLIGHT_BUDGET_PCT = 0.3;
+  private readonly MAX_HOTEL_BUDGET_PCT = 0.1;
+  private readonly MAX_DESTINATIONS = 8;
+
   constructor(
-    private readonly amadeus: AmadeusService,
+    private readonly duffel: DuffelService,
     private readonly cj: CJService,
   ) {}
 
@@ -186,8 +192,15 @@ export class TripsService {
     return AIRPORTS;
   }
 
-  async searchAirportsAmadeus(query: string): Promise<AmadeusLocation[]> {
-    return this.amadeus.searchAirports(query);
+  private getRelevantDestinations(originCode: string): Airport[] {
+    const regions = AIRPORT_REGIONS[originCode];
+    if (regions) {
+      return regions
+        .map((idx) => AIRPORTS[idx])
+        .filter((a) => a && a.code !== originCode);
+    }
+
+    return AIRPORTS.filter((a) => a.code !== originCode);
   }
 
   private generateSkyscannerUrl(
@@ -203,9 +216,9 @@ export class TripsService {
   }
 
   async travelSearch(dto: TravelSearchDto) {
-    const destinations: Airport[] = dto.destination_code
+    const destinations = dto.destination_code
       ? AIRPORTS.filter((a) => a.code === dto.destination_code)
-      : AIRPORTS.filter((a) => a.code !== dto.origin_code);
+      : this.getRelevantDestinations(dto.origin_code).slice(0, this.MAX_DESTINATIONS);
 
     const from = new Date(dto.date_from);
     const to = new Date(dto.date_to);
@@ -214,10 +227,10 @@ export class TripsService {
       Math.ceil((to.getTime() - from.getTime()) / 86400000),
     );
 
-    const maxFlightBudget = dto.max_budget * 0.5;
-    const maxHotelPerNight = dto.max_budget * 0.1;
+    const maxFlightBudget = dto.max_budget * this.MAX_FLIGHT_BUDGET_PCT;
+    const maxHotelPerNight = dto.max_budget * this.MAX_HOTEL_BUDGET_PCT;
 
-    const useAmadeus = this.amadeus.isConfigured();
+    const useDuffel = this.duffel.isConfigured();
 
     const results = await Promise.all(
       destinations.map(async (airport) => {
@@ -225,44 +238,25 @@ export class TripsService {
         let hotelPerNight: number;
         let isEstimate: boolean;
 
-        if (useAmadeus) {
-          const flights = await this.amadeus.searchFlights({
-            originLocationCode: dto.origin_code,
-            destinationLocationCode: airport.code,
-            departureDate: dto.date_from,
-            returnDate: dto.date_to,
+        if (useDuffel) {
+          const flightResult = await this.duffel.searchFlights({
+            origin: dto.origin_code,
+            destination: airport.code,
+            dateFrom: dto.date_from,
+            dateTo: dto.date_to,
             adults: dto.adults,
-            currencyCode: 'EUR',
+            currency: 'EUR',
           });
 
-          if (flights.length === 0) return null;
-
-          flightCost = flights.reduce((min, f) => {
-            const total = parseFloat(f.price.total);
-            return total < min ? total : min;
-          }, Infinity);
-
-          const hotels = await this.amadeus.searchHotels({
-            cityCode: airport.code,
-            checkInDate: dto.date_from,
-            checkOutDate: dto.date_to,
-            adults: dto.adults,
-          });
-
-          hotelPerNight = 0;
-          if (hotels.length > 0) {
-            const validOffers = hotels
-              .flatMap((h) => h.offers)
-              .filter((o) => o.price && o.price.total);
-            if (validOffers.length > 0) {
-              const cheapestHotel = validOffers.reduce((min, o) => {
-                const total = parseFloat(o.price.total);
-                return total < min ? total : min;
-              }, Infinity);
-              hotelPerNight = cheapestHotel / nights;
-            }
+          if (!flightResult) {
+            flightCost = Math.round(maxFlightBudget * 0.5);
+            hotelPerNight = Math.round(maxHotelPerNight * 0.5);
+            isEstimate = true;
+          } else {
+            flightCost = flightResult.pricePerAdult * dto.adults;
+            hotelPerNight = Math.round(maxHotelPerNight * 0.5);
+            isEstimate = false;
           }
-          isEstimate = false;
         } else {
           const seed =
             (airport.code.charCodeAt(0) * 31 + airport.code.charCodeAt(1) * 17 + dto.origin_code.charCodeAt(0) * 13) %
@@ -275,10 +269,7 @@ export class TripsService {
         const hotelTotal = hotelPerNight * nights;
         const totalCost = flightCost + hotelTotal;
 
-        if (
-          flightCost > maxFlightBudget ||
-          (hotelPerNight > 0 && hotelPerNight > maxHotelPerNight)
-        ) {
+        if (flightCost > maxFlightBudget) {
           return null;
         }
 
@@ -311,7 +302,7 @@ export class TripsService {
             dto.adults,
           ).url,
           is_estimate: isEstimate,
-          source: useAmadeus ? 'amadeus' : 'estimate',
+          source: useDuffel && !isEstimate ? 'duffel' : 'estimate',
         };
       }),
     );
@@ -321,23 +312,24 @@ export class TripsService {
       .sort((a, b) => a!.total_estimate - b!.total_estimate)
       .slice(0, 8);
 
-    const note = useAmadeus
-      ? 'Precios reales obtenidos de Amadeus API. Los enlaces a Skyscanner y Booking son para referencia.'
+    const duffelResults = validResults.filter((r) => r!.source === 'duffel').length;
+    const note = duffelResults > 0
+      ? `Precios reales de vuelos obtenidos de Duffel (${duffelResults} destinos). Los enlaces a Skyscanner y Booking son para reservar directamente.`
       : 'Precios estimados. Haz clic en los enlaces para ver precios actuales en Skyscanner y Booking.';
 
     return {
       origin: { code: dto.origin_code, city: dto.origin_city },
       search_params: { ...dto, nights: validResults[0]?.nights ?? 0 },
       budget_breakdown: {
-        max_for_flights: dto.max_budget * 0.5,
-        max_for_hotel_per_night: dto.max_budget * 0.1,
+        max_for_flights: dto.max_budget * this.MAX_FLIGHT_BUDGET_PCT,
+        max_for_hotel_per_night: dto.max_budget * this.MAX_HOTEL_BUDGET_PCT,
       },
       destinations: validResults,
       note,
       api_status: {
-        amadeus_connected: this.amadeus.isConfigured(),
+        duffel_connected: this.duffel.isConfigured(),
         cj_connected: this.cj.isConfigured(),
-        data_source: useAmadeus ? 'amadeus' : 'estimate',
+        data_source: duffelResults > 0 ? 'duffel' : 'estimate',
       },
     };
   }
@@ -370,7 +362,7 @@ export class TripsController {
 }
 
 @Module({
-  imports: [AmadeusModule, CJModule],
+  imports: [DuffelModule, CJModule],
   providers: [TripsService],
   controllers: [TripsController],
   exports: [TripsService],
