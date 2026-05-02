@@ -1,5 +1,5 @@
 import { Module, Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
+import { HttpModule, HttpService } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
@@ -133,7 +133,7 @@ export class AmadeusService {
 
       this.logger.log('Amadeus token acquired successfully');
       return this.token.access_token;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         'Failed to obtain Amadeus token',
         error?.response?.data || error.message,
@@ -155,7 +155,7 @@ export class AmadeusService {
         }),
       );
       return response.data.data || [];
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         'Airport search failed',
         error?.response?.data || error.message,
@@ -209,7 +209,7 @@ export class AmadeusService {
           },
         };
       });
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Flight search failed for ${params.originLocationCode}-${params.destinationLocationCode}`,
         error?.response?.data || error.message,
@@ -251,7 +251,7 @@ export class AmadeusService {
       );
 
       return response.data.data || [];
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Hotel search failed for ${params.cityCode}`,
         error?.response?.data || error.message,
@@ -287,7 +287,7 @@ export class AmadeusService {
       );
 
       return response.data.data || [];
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Flight inspiration failed for ${params.origin}`,
         error?.response?.data || error.message,
@@ -298,7 +298,7 @@ export class AmadeusService {
 }
 
 @Module({
-  imports: [ConfigModule],
+  imports: [HttpModule, ConfigModule],
   providers: [AmadeusService],
   exports: [AmadeusService],
 })

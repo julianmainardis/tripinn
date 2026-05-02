@@ -17,6 +17,7 @@ import {
   AmadeusService,
   AmadeusLocation,
 } from '../amadeus/amadeus.module';
+import { CJModule, CJService } from '../cj/cj.module';
 
 type Airport = { code: string; city: string; country: string; name: string };
 
@@ -166,7 +167,10 @@ class TravelSearchDto {
 
 @Injectable()
 export class TripsService {
-  constructor(private readonly amadeus: AmadeusService) {}
+  constructor(
+    private readonly amadeus: AmadeusService,
+    private readonly cj: CJService,
+  ) {}
 
   searchAirportsLocal(query: string): Airport[] {
     const q = query.toLowerCase();
@@ -196,16 +200,6 @@ export class TripsService {
     const dOut = dateOut.replace(/-/g, '').slice(2);
     const dIn = dateIn.replace(/-/g, '').slice(2);
     return `https://www.skyscanner.es/transporte/vuelos/${origin.toLowerCase()}/${dest.toLowerCase()}/${dOut}/${dIn}/?adults=${adults}&adultsv2=${adults}&cabinclass=economy&currency=EUR`;
-  }
-
-  private generateBookingUrl(
-    city: string,
-    checkin: string,
-    checkout: string,
-    adults: number,
-  ): string {
-    const encoded = encodeURIComponent(city);
-    return `https://www.booking.com/searchresults.es.html?ss=${encoded}&checkin=${checkin}&checkout=${checkout}&group_adults=${adults}&no_rooms=1&selected_currency=EUR`;
   }
 
   async travelSearch(dto: TravelSearchDto) {
@@ -304,12 +298,12 @@ export class TripsService {
             dto.date_to,
             dto.adults,
           ),
-          hotels_url: this.generateBookingUrl(
+          hotels_url: this.cj.generateHotelSearchLink(
             airport.city,
             dto.date_from,
             dto.date_to,
             dto.adults,
-          ),
+          ).url,
           is_estimate: false,
           source: 'amadeus',
         };
@@ -365,7 +359,7 @@ export class TripsController {
 }
 
 @Module({
-  imports: [AmadeusModule],
+  imports: [AmadeusModule, CJModule],
   providers: [TripsService],
   controllers: [TripsController],
   exports: [TripsService],
