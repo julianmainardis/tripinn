@@ -151,10 +151,9 @@ const AIRPORTS: Airport[] = [
   { code: 'GRU', city: 'São Paulo', country: 'Brasil', name: 'Guarulhos' },
 ];
 
-const AIRPORT_REGIONS: Record<string, number[]> = {
-  MAD: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
-  BCN: [1, 2, 3, 4, 5, 6, 7, 0, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
-  LIS: [10, 0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
+const REGION_PRIORITY: Record<string, string[]> = {
+  'España': ['España', 'Portugal'],
+  'Portugal': ['Portugal', 'España'],
 };
 
 class TravelSearchDto {
@@ -193,14 +192,20 @@ export class TripsService {
   }
 
   private getRelevantDestinations(originCode: string): Airport[] {
-    const regions = AIRPORT_REGIONS[originCode];
-    if (regions) {
-      return regions
-        .map((idx) => AIRPORTS[idx])
-        .filter((a) => a && a.code !== originCode);
-    }
+    const origin = AIRPORTS.find((a) => a.code === originCode);
+    if (!origin) return AIRPORTS.slice(0, this.MAX_DESTINATIONS);
 
-    return AIRPORTS.filter((a) => a.code !== originCode);
+    const priorities = REGION_PRIORITY[origin.country] ?? [origin.country];
+    const sorted = [...AIRPORTS].sort((a, b) => {
+      const aIdx = priorities.indexOf(a.country);
+      const bIdx = priorities.indexOf(b.country);
+      if (aIdx !== bIdx) return aIdx - bIdx;
+      return 0;
+    });
+
+    return sorted
+      .filter((a) => a.code !== originCode)
+      .slice(0, this.MAX_DESTINATIONS);
   }
 
   private generateSkyscannerUrl(
@@ -218,7 +223,7 @@ export class TripsService {
   async travelSearch(dto: TravelSearchDto) {
     const destinations = dto.destination_code
       ? AIRPORTS.filter((a) => a.code === dto.destination_code)
-      : this.getRelevantDestinations(dto.origin_code).slice(0, this.MAX_DESTINATIONS);
+      : this.getRelevantDestinations(dto.origin_code);
 
     const from = new Date(dto.date_from);
     const to = new Date(dto.date_to);
@@ -236,7 +241,7 @@ export class TripsService {
       destinations.map(async (airport) => {
         let flightCost: number;
         let hotelPerNight: number;
-        let isEstimate: boolean;
+        let flightIsReal: boolean;
 
         if (useDuffel) {
           const flightResult = await this.duffel.searchFlights({
@@ -248,22 +253,22 @@ export class TripsService {
             currency: 'EUR',
           });
 
-          if (!flightResult) {
-            flightCost = Math.round(maxFlightBudget * 0.5);
-            hotelPerNight = Math.round(maxHotelPerNight * 0.5);
-            isEstimate = true;
-          } else {
+          if (flightResult) {
             flightCost = flightResult.pricePerAdult * dto.adults;
-            hotelPerNight = Math.round(maxHotelPerNight * 0.5);
-            isEstimate = false;
+            flightIsReal = true;
+          } else {
+            flightCost = Math.round(maxFlightBudget * 0.5);
+            flightIsReal = false;
           }
+
+          hotelPerNight = Math.round(maxHotelPerNight * 0.5);
         } else {
           const seed =
             (airport.code.charCodeAt(0) * 31 + airport.code.charCodeAt(1) * 17 + dto.origin_code.charCodeAt(0) * 13) %
             100;
           flightCost = Math.round(maxFlightBudget * 0.4 + (seed / 100) * maxFlightBudget * 0.6);
           hotelPerNight = Math.round(maxHotelPerNight * 0.4 + (seed / 100) * maxHotelPerNight * 0.6);
-          isEstimate = true;
+          flightIsReal = false;
         }
 
         const hotelTotal = hotelPerNight * nights;
@@ -301,8 +306,8 @@ export class TripsService {
             dto.date_to,
             dto.adults,
           ).url,
-          is_estimate: isEstimate,
-          source: useDuffel && !isEstimate ? 'duffel' : 'estimate',
+          is_estimate: !flightIsReal,
+          source: flightIsReal ? 'duffel' : 'estimate',
         };
       }),
     );
@@ -312,9 +317,9 @@ export class TripsService {
       .sort((a, b) => a!.total_estimate - b!.total_estimate)
       .slice(0, 8);
 
-    const duffelResults = validResults.filter((r) => r!.source === 'duffel').length;
-    const note = duffelResults > 0
-      ? `Precios reales de vuelos obtenidos de Duffel (${duffelResults} destinos). Los enlaces a Skyscanner y Booking son para reservar directamente.`
+    const duffelCount = validResults.filter((r) => r!.source === 'duffel').length;
+    const note = duffelCount > 0
+      ? `Precios reales de vuelos obtenidos de Duffel (${duffelCount}/${validResults.length} destinos). Hoteles con tarifas estimadas. Los enlaces a Skyscanner y Booking son para reservar directamente.`
       : 'Precios estimados. Haz clic en los enlaces para ver precios actuales en Skyscanner y Booking.';
 
     return {
@@ -329,7 +334,7 @@ export class TripsService {
       api_status: {
         duffel_connected: this.duffel.isConfigured(),
         cj_connected: this.cj.isConfigured(),
-        data_source: duffelResults > 0 ? 'duffel' : 'estimate',
+        data_source: duffelCount > 0 ? 'duffel' : 'estimate',
       },
     };
   }
