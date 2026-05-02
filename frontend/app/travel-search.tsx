@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Image, ActivityIndicator, KeyboardAvoidingView, Platform, Linking,
-  FlatList, Modal, Keyboard
+  FlatList, Modal, Keyboard, LayoutChangeEvent
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -67,22 +67,34 @@ const MONTH_NAMES = [
 interface CalendarPickerProps {
   visible: boolean;
   onClose: () => void;
-  onSelectDate: (date: Date) => void;
-  selectedDate: Date | null;
+  onSelectRange: (departure: Date, returnDate: Date) => void;
+  departureDate: Date | null;
+  returnDate: Date | null;
   minimumDate?: Date;
   title: string;
 }
 
-function CalendarPicker({ visible, onClose, onSelectDate, selectedDate, minimumDate, title }: CalendarPickerProps) {
+function CalendarPicker({ visible, onClose, onSelectRange, departureDate, returnDate, minimumDate, title }: CalendarPickerProps) {
   const today = new Date();
   const minDate = minimumDate || today;
-  const [viewMonth, setViewMonth] = useState(selectedDate ? selectedDate.getMonth() : today.getMonth());
-  const [viewYear, setViewYear] = useState(selectedDate ? selectedDate.getFullYear() : today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [tempDeparture, setTempDeparture] = useState<Date | null>(null);
+  const [tempReturn, setTempReturn] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setTempDeparture(departureDate);
+      setTempReturn(returnDate);
+      setViewMonth(departureDate ? departureDate.getMonth() : today.getMonth());
+      setViewYear(departureDate ? departureDate.getFullYear() : today.getFullYear());
+    }
+  }, [visible]);
 
   const getDaysInMonth = (month: number, year: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (month: number, year: number) => {
     const day = new Date(year, month, 1).getDay();
-    return day === 0 ? 6 : day - 1; // Monday = 0
+    return day === 0 ? 6 : day - 1;
   };
 
   const goToPrevMonth = () => {
@@ -111,12 +123,36 @@ function CalendarPicker({ visible, onClose, onSelectDate, selectedDate, minimumD
     return date < min;
   };
 
-  const isDateSelected = (day: number) => {
-    if (!selectedDate) return false;
-    return selectedDate.getDate() === day &&
-      selectedDate.getMonth() === viewMonth &&
-      selectedDate.getFullYear() === viewYear;
+  const isDateInPast = (day: number) => {
+    const date = new Date(viewYear, viewMonth, day);
+    date.setHours(0, 0, 0, 0);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return date < now;
   };
+
+  const isDepartureSelected = (day: number) => {
+    if (!tempDeparture) return false;
+    return tempDeparture.getDate() === day &&
+      tempDeparture.getMonth() === viewMonth &&
+      tempDeparture.getFullYear() === viewYear;
+  };
+
+  const isReturnSelected = (day: number) => {
+    if (!tempReturn) return false;
+    return tempReturn.getDate() === day &&
+      tempReturn.getMonth() === viewMonth &&
+      tempReturn.getFullYear() === viewYear;
+  };
+
+  const isInRange = (day: number) => {
+    if (!tempDeparture || !tempReturn) return false;
+    const date = new Date(viewYear, viewMonth, day);
+    return date > tempDeparture && date < tempReturn;
+  };
+
+  const isRangeStart = (day: number) => isDepartureSelected(day);
+  const isRangeEnd = (day: number) => isReturnSelected(day);
 
   const isToday = (day: number) => {
     return today.getDate() === day &&
@@ -128,6 +164,27 @@ function CalendarPicker({ visible, onClose, onSelectDate, selectedDate, minimumD
     const prevDate = new Date(viewYear, viewMonth - 1, 1);
     const minMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
     return prevDate >= minMonth;
+  };
+
+  const handleDayPress = (day: number) => {
+    const date = new Date(viewYear, viewMonth, day);
+
+    if (!tempDeparture || (tempDeparture && tempReturn)) {
+      setTempDeparture(date);
+      setTempReturn(null);
+    } else if (date <= tempDeparture) {
+      setTempDeparture(date);
+      setTempReturn(null);
+    } else {
+      setTempReturn(date);
+    }
+  };
+
+  const handleConfirm = () => {
+    if (tempDeparture && tempReturn) {
+      onSelectRange(tempDeparture, tempReturn);
+    }
+    onClose();
   };
 
   const daysInMonth = getDaysInMonth(viewMonth, viewYear);
@@ -146,6 +203,14 @@ function CalendarPicker({ visible, onClose, onSelectDate, selectedDate, minimumD
       <TouchableOpacity style={calStyles.overlay} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity activeOpacity={1} style={calStyles.container}>
           <Text style={calStyles.title}>{title}</Text>
+
+          <View style={calStyles.selectionInfo}>
+            <Text style={calStyles.selectionHint}>
+              {!tempDeparture ? 'Selecciona fecha de ida' :
+               !tempReturn ? 'Selecciona fecha de vuelta' :
+               'Fechas seleccionadas'}
+            </Text>
+          </View>
 
           <View style={calStyles.monthNav}>
             <TouchableOpacity onPress={goToPrevMonth} disabled={!canGoPrev()} style={calStyles.navButton}>
@@ -171,7 +236,12 @@ function CalendarPicker({ visible, onClose, onSelectDate, selectedDate, minimumD
                 return <View key={`empty-${idx}`} style={calStyles.dayCell} />;
               }
               const disabled = isDateDisabled(day);
-              const selected = isDateSelected(day);
+              const inPast = isDateInPast(day);
+              const depSelected = isDepartureSelected(day);
+              const retSelected = isReturnSelected(day);
+              const inRange = isInRange(day);
+              const rangeStart = isRangeStart(day);
+              const rangeEnd = isRangeEnd(day);
               const todayMark = isToday(day);
 
               return (
@@ -179,20 +249,22 @@ function CalendarPicker({ visible, onClose, onSelectDate, selectedDate, minimumD
                   key={day}
                   style={[
                     calStyles.dayCell,
-                    selected && calStyles.dayCellSelected,
-                    todayMark && !selected && calStyles.dayCellToday
+                    depSelected && calStyles.dayCellSelected,
+                    retSelected && calStyles.dayCellSelected,
+                    inRange && calStyles.dayCellInRange,
+                    rangeStart && calStyles.dayCellRangeStart,
+                    rangeEnd && calStyles.dayCellRangeEnd,
+                    todayMark && !depSelected && !retSelected && calStyles.dayCellToday
                   ]}
-                  disabled={disabled}
-                  onPress={() => {
-                    onSelectDate(new Date(viewYear, viewMonth, day));
-                    onClose();
-                  }}
+                  disabled={disabled || inPast}
+                  onPress={() => handleDayPress(day)}
                 >
                   <Text style={[
                     calStyles.dayText,
-                    disabled && calStyles.dayTextDisabled,
-                    selected && calStyles.dayTextSelected,
-                    todayMark && !selected && calStyles.dayTextToday
+                    (disabled || inPast) && calStyles.dayTextDisabled,
+                    (depSelected || retSelected) && calStyles.dayTextSelected,
+                    inRange && calStyles.dayTextInRange,
+                    todayMark && !depSelected && !retSelected && calStyles.dayTextToday
                   ]}>
                     {day}
                   </Text>
@@ -201,9 +273,20 @@ function CalendarPicker({ visible, onClose, onSelectDate, selectedDate, minimumD
             })}
           </View>
 
-          <TouchableOpacity onPress={onClose} style={calStyles.cancelButton}>
-            <Text style={calStyles.cancelText}>Cancelar</Text>
-          </TouchableOpacity>
+          <View style={calStyles.bottomRow}>
+            <TouchableOpacity onPress={onClose} style={calStyles.cancelButton}>
+              <Text style={calStyles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleConfirm}
+              style={[calStyles.confirmButton, (!tempDeparture || !tempReturn) && calStyles.confirmButtonDisabled]}
+              disabled={!tempDeparture || !tempReturn}
+            >
+              <Text style={[calStyles.confirmText, (!tempDeparture || !tempReturn) && calStyles.confirmTextDisabled]}>
+                Confirmar
+              </Text>
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
       </TouchableOpacity>
     </Modal>
@@ -230,7 +313,16 @@ const calStyles = StyleSheet.create({
     fontWeight: FONTS.weights.bold,
     color: COLORS.textPrimary,
     textAlign: 'center',
+    marginBottom: SPACING.sm
+  },
+  selectionInfo: {
+    alignItems: 'center',
     marginBottom: SPACING.md
+  },
+  selectionHint: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.primary,
+    fontWeight: FONTS.weights.medium
   },
   monthNav: {
     flexDirection: 'row',
@@ -274,6 +366,19 @@ const calStyles = StyleSheet.create({
   dayCellSelected: {
     backgroundColor: COLORS.primary
   },
+  dayCellInRange: {
+    backgroundColor: `${COLORS.primary}20`
+  },
+  dayCellRangeStart: {
+    backgroundColor: COLORS.primary,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  dayCellRangeEnd: {
+    backgroundColor: COLORS.primary,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+  },
   dayCellToday: {
     backgroundColor: `${COLORS.primary}15`
   },
@@ -288,17 +393,49 @@ const calStyles = StyleSheet.create({
     color: COLORS.textWhite,
     fontWeight: FONTS.weights.bold
   },
+  dayTextInRange: {
+    color: COLORS.primary,
+    fontWeight: FONTS.weights.medium
+  },
   dayTextToday: {
     color: COLORS.primary,
     fontWeight: FONTS.weights.bold
   },
-  cancelButton: {
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: SPACING.md,
+    gap: SPACING.md
+  },
+  cancelButton: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: SPACING.sm
+    paddingVertical: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md
   },
   cancelText: {
     fontSize: FONTS.sizes.md,
+    color: COLORS.textSecondary
+  },
+  confirmButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md
+  },
+  confirmButtonDisabled: {
+    backgroundColor: COLORS.textLight,
+    opacity: 0.5
+  },
+  confirmText: {
+    fontSize: FONTS.sizes.md,
+    fontWeight: FONTS.weights.semibold,
+    color: COLORS.textWhite
+  },
+  confirmTextDisabled: {
     color: COLORS.textSecondary
   }
 });
@@ -321,14 +458,15 @@ export default function TravelSearchScreen() {
 
   const [dateFrom, setDateFrom] = useState<Date | null>(null);
   const [dateTo, setDateTo] = useState<Date | null>(null);
-  const [showDateFromPicker, setShowDateFromPicker] = useState(false);
-  const [showDateToPicker, setShowDateToPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult | null>(null);
   const [error, setError] = useState('');
 
-  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mainScrollRef = useRef<ScrollView>(null);
+  const resultsRef = useRef<number>(0);
 
   // Format date for display
   const formatDate = (date: Date | null): string => {
@@ -386,17 +524,10 @@ export default function TravelSearchScreen() {
     Keyboard.dismiss();
   };
 
-  // Handle date selection
-  const handleDateFromSelect = (date: Date) => {
-    setDateFrom(date);
-    // If return date is before new departure date, reset it
-    if (dateTo && dateTo <= date) {
-      setDateTo(null);
-    }
-  };
-
-  const handleDateToSelect = (date: Date) => {
-    setDateTo(date);
+  // Handle date range selection
+  const handleDateRangeSelect = (departure: Date, returnDate: Date) => {
+    setDateFrom(departure);
+    setDateTo(returnDate);
   };
 
   // Adults counter
@@ -446,6 +577,12 @@ export default function TravelSearchScreen() {
         token ?? ''
       );
       setResults(response.data);
+      setTimeout(() => {
+        mainScrollRef.current?.scrollTo({
+          y: resultsRef.current - 80,
+          animated: true,
+        });
+      }, 200);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Error al buscar destinos');
     } finally {
@@ -485,6 +622,7 @@ export default function TravelSearchScreen() {
         </View>
 
         <ScrollView
+          ref={mainScrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -556,39 +694,24 @@ export default function TravelSearchScreen() {
               </View>
             </View>
 
-            {/* Date Pickers */}
-            <View style={styles.dateRow}>
-              <View style={[styles.inputGroup, styles.dateInput]}>
-                <Text style={styles.label}>Fecha ida</Text>
-                <TouchableOpacity
-                  style={styles.inputContainer}
-                  onPress={() => setShowDateFromPicker(true)}
-                >
-                  <Ionicons name="calendar-outline" size={20} color={dateFrom ? COLORS.primary : COLORS.textSecondary} />
+            {/* Date Picker - Combined Range */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Fechas de viaje</Text>
+              <TouchableOpacity
+                style={styles.inputContainer}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Ionicons name="calendar-outline" size={20} color={dateFrom ? COLORS.primary : COLORS.textSecondary} />
+                <View style={styles.dateRangeDisplay}>
                   <Text style={[styles.dateText, !dateFrom && styles.dateTextPlaceholder]}>
-                    {dateFrom ? formatDate(dateFrom) : 'Seleccionar'}
+                    {dateFrom ? formatDate(dateFrom) : 'Ida'}
                   </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={[styles.inputGroup, styles.dateInput]}>
-                <Text style={styles.label}>Fecha vuelta</Text>
-                <TouchableOpacity
-                  style={styles.inputContainer}
-                  onPress={() => {
-                    if (!dateFrom) {
-                      setError('Primero selecciona la fecha de ida');
-                      return;
-                    }
-                    setShowDateToPicker(true);
-                  }}
-                >
-                  <Ionicons name="calendar-outline" size={20} color={dateTo ? COLORS.primary : COLORS.textSecondary} />
+                  <Ionicons name="arrow-forward" size={14} color={COLORS.textLight} style={{ marginHorizontal: 4 }} />
                   <Text style={[styles.dateText, !dateTo && styles.dateTextPlaceholder]}>
-                    {dateTo ? formatDate(dateTo) : 'Seleccionar'}
+                    {dateTo ? formatDate(dateTo) : 'Vuelta'}
                   </Text>
-                </TouchableOpacity>
-              </View>
+                </View>
+              </TouchableOpacity>
             </View>
 
             {dateFrom && dateTo && (
@@ -637,7 +760,7 @@ export default function TravelSearchScreen() {
             <View style={styles.infoBox}>
               <Ionicons name="information-circle-outline" size={18} color={COLORS.accent} />
               <Text style={styles.infoText}>
-                Buscamos vuelos con Duffel y hoteles con Booking. Los enlaces te llevan a Skyscanner y Booking para reservar directamente a los mejores precios.
+                Precios reales de vuelos. Los enlaces te llevan a Skyscanner y Booking para reservar directamente a los mejores precios.
               </Text>
             </View>
           </View>
@@ -652,7 +775,19 @@ export default function TravelSearchScreen() {
 
           {/* Results */}
           {results && (
-            <View style={styles.resultsSection}>
+            <View
+              ref={(el) => {
+                if (el) {
+                  el.measure((_x, _y, _w, h, _px, py) => {
+                    resultsRef.current = py;
+                  });
+                }
+              }}
+              style={styles.resultsSection}
+              onLayout={(e) => {
+                resultsRef.current = e.nativeEvent.layout.y;
+              }}
+            >
               <Text style={styles.resultsTitle}>
                 {results.destinations.length > 0
                   ? `${results.destinations.length} destinos encontrados`
@@ -711,20 +846,22 @@ export default function TravelSearchScreen() {
                     {/* Action buttons: Skyscanner + Booking */}
                     <View style={styles.linkButtonsRow}>
                       <TouchableOpacity
-                        style={styles.linkButton}
+                        style={styles.linkButtonPrimary}
                         onPress={() => openExternalLink(dest.flights_url)}
                       >
-                        <Ionicons name="airplane" size={16} color={COLORS.primary} />
-                        <Text style={styles.linkButtonText}>Ver vuelos</Text>
-                        <Ionicons name="open-outline" size={14} color={COLORS.primary} />
+                        <Ionicons name="airplane" size={16} color={COLORS.textWhite} />
+                        <Text style={styles.linkButtonTextPrimary}>Ver vuelos en Skyscanner</Text>
+                        <Ionicons name="open-outline" size={14} color={COLORS.textWhite} />
                       </TouchableOpacity>
+                    </View>
+                    <View style={styles.linkButtonsRow}>
                       <TouchableOpacity
-                        style={styles.linkButton}
+                        style={styles.linkButtonSecondary}
                         onPress={() => openExternalLink(dest.hotels_url)}
                       >
                         <Ionicons name="bed" size={16} color={COLORS.accent} />
-                        <Text style={[styles.linkButtonText, { color: COLORS.accent }]}>Ver hoteles</Text>
-                        <Ionicons name="open-outline" size={14} color={COLORS.accent} />
+                        <Text style={[styles.linkButtonTextSecondary, { color: COLORS.accent }]}>Ver hoteles en Booking</Text>
+                        <Ionicons name="open-outline" size={14} color={COLORS.textLight} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -750,22 +887,15 @@ export default function TravelSearchScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Calendar Modals */}
+      {/* Calendar Modal */}
       <CalendarPicker
-        visible={showDateFromPicker}
-        onClose={() => setShowDateFromPicker(false)}
-        onSelectDate={handleDateFromSelect}
-        selectedDate={dateFrom}
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onSelectRange={handleDateRangeSelect}
+        departureDate={dateFrom}
+        returnDate={dateTo}
         minimumDate={new Date()}
-        title="Fecha de ida"
-      />
-      <CalendarPicker
-        visible={showDateToPicker}
-        onClose={() => setShowDateToPicker(false)}
-        onSelectDate={handleDateToSelect}
-        selectedDate={dateTo}
-        minimumDate={dateFrom ? new Date(dateFrom.getTime() + 86400000) : new Date()}
-        title="Fecha de vuelta"
+        title="Selecciona fechas de viaje"
       />
     </SafeAreaView>
   );
@@ -837,6 +967,10 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs
   },
   dateTextPlaceholder: { color: COLORS.textLight },
+  dateRangeDisplay: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: SPACING.sm,
+    paddingVertical: SPACING.xs
+  },
   nightsBadge: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: `${COLORS.primary}10`, borderRadius: BORDER_RADIUS.full,
@@ -928,6 +1062,25 @@ const styles = StyleSheet.create({
   },
   linkButtonText: {
     fontSize: FONTS.sizes.sm, fontWeight: FONTS.weights.semibold, color: COLORS.primary
+  },
+  linkButtonPrimary: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.md, paddingHorizontal: SPACING.sm, gap: 6
+  },
+  linkButtonTextPrimary: {
+    fontSize: FONTS.sizes.md, fontWeight: FONTS.weights.bold, color: COLORS.textWhite
+  },
+  linkButtonSecondary: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.cardBackground, borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm, gap: 4,
+    borderWidth: 1.5, borderColor: COLORS.primary,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08, shadowRadius: 3, elevation: 2,
+  },
+  linkButtonTextSecondary: {
+    fontSize: FONTS.sizes.sm, fontWeight: FONTS.weights.semibold
   },
 
   // Estimate badge

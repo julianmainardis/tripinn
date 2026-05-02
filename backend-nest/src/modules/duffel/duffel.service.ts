@@ -6,6 +6,8 @@ import {
   DuffelSearchParams,
   DuffelOffer,
   DuffelOfferRequest,
+  DuffelPlace,
+  DuffelAirportResponse,
 } from './duffel.types';
 
 interface DuffelOfferRequestResponse {
@@ -55,6 +57,127 @@ export class DuffelService implements OnModuleInit {
 
   isConfigured(): boolean {
     return this.isConfig;
+  }
+
+  async searchPlaces(query: string): Promise<DuffelPlace[]> {
+    if (!this.isConfig || query.length < 2) {
+      return [];
+    }
+
+    try {
+      const url = `${this.baseUrl}/places/suggestions?query=${encodeURIComponent(query)}`;
+
+      const response = await firstValueFrom(
+        this.http.get<{ data: DuffelPlace[] }>(url, {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            Accept: 'application/json',
+            'Duffel-Version': 'v2',
+          },
+          timeout: 10000,
+        }),
+      );
+
+      return response.data.data.slice(0, 10);
+    } catch (error: any) {
+      this.logger.warn(`Failed to search Duffel places: ${error.message}`);
+      return [];
+    }
+  }
+
+  async listAirportsByCountry(countryCode: string): Promise<DuffelAirportResponse[]> {
+    if (!this.isConfig) {
+      return [];
+    }
+
+    const allAirports: DuffelAirportResponse[] = [];
+    let after: string | undefined;
+
+    try {
+      do {
+        const params = new URLSearchParams({
+          limit: '200',
+          iata_country_code: countryCode,
+        });
+        if (after) {
+          params.set('after', after);
+        }
+
+        const url = `${this.baseUrl}/air/airports?${params.toString()}`;
+
+        const response = await firstValueFrom(
+          this.http.get<{ data: DuffelAirportResponse[]; meta: { after?: string } }>(url, {
+            headers: {
+              Authorization: `Bearer ${this.accessToken}`,
+              Accept: 'application/json',
+              'Duffel-Version': 'v2',
+            },
+            timeout: 15000,
+          }),
+        );
+
+        allAirports.push(...response.data.data);
+        after = response.data.meta.after;
+      } while (after);
+
+      return allAirports;
+    } catch (error: any) {
+      this.logger.warn(`Failed to list airports for ${countryCode}: ${error.message}`);
+      return [];
+    }
+  }
+
+  async createBookingLink(
+    origin: string,
+    destination: string,
+    dateFrom: string,
+    dateTo: string,
+    adults: number,
+  ): Promise<string | null> {
+    if (!this.isConfig) {
+      return null;
+    }
+
+    try {
+      const requestBody = {
+        data: {
+          reference: `tripinn-${Date.now()}-${origin}-${destination}`,
+          success_url: 'https://gettripinn.com',
+          failure_url: 'https://gettripinn.com',
+          abandonment_url: 'https://gettripinn.com',
+          logo_url: '',
+          primary_color: '#0066FF',
+          flights: {
+            enabled: true,
+          },
+          stays: {
+            enabled: false,
+          },
+        },
+      };
+
+      const url = `${this.baseUrl}/links/sessions`;
+
+      const response = await firstValueFrom(
+        this.http.post<{ data: { url: string } }>(url, requestBody, {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'Duffel-Version': 'v2',
+          },
+          timeout: 10000,
+        }),
+      );
+
+      return response.data.data.url;
+    } catch (error: any) {
+      const status = error.response?.status;
+      this.logger.warn(
+        `Failed to create Duffel booking link for ${origin}-${destination} (status: ${status}): ${error.message}`,
+      );
+      return null;
+    }
   }
 
   async searchFlights(

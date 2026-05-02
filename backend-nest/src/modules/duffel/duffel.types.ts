@@ -175,11 +175,58 @@ export interface DuffelOfferRequest {
   offers: DuffelOffer[];
 }
 
+export interface DuffelPlace {
+  id: string;
+  type: 'city' | 'airport';
+  name: string;
+  iata_code: string;
+  iata_country_code: string;
+  city_name: string | null;
+  iata_city_code: string | null;
+  airports?: DuffelAirport[] | null;
+}
+
+export interface DuffelAirport {
+  id: string;
+  type: string;
+  name: string;
+  iata_code: string;
+  icao_code: string | null;
+  iata_country_code: string;
+  iata_city_code: string;
+  city_name: string;
+  time_zone: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface DuffelSearchParams {
   origin: string;
   destination: string;
   dateFrom: string;
   dateTo: string;
   adults: number;
-  currency?: string;
+  currency: string;
+}
+
+export interface DuffelAirportResponse {
+  id: string;
+  time_zone: string;
+  name: string;
+  longitude: number;
+  latitude: number;
+  icao_code: string | null;
+  iata_country_code: string;
+  iata_code: string;
+  iata_city_code: string;
+  city_name: string;
+}
+
+export interface DuffelAirportListResponse {
+  data: DuffelAirportResponse[];
+  meta: {
+    limit: number;
+    after?: string;
+    before?: string;
+  };
 }
