@@ -207,64 +207,73 @@ export class TripsService {
       ? AIRPORTS.filter((a) => a.code === dto.destination_code)
       : AIRPORTS.filter((a) => a.code !== dto.origin_code);
 
+    const from = new Date(dto.date_from);
+    const to = new Date(dto.date_to);
+    const nights = Math.max(
+      2,
+      Math.ceil((to.getTime() - from.getTime()) / 86400000),
+    );
+
+    const maxFlightBudget = dto.max_budget * 0.5;
+    const maxHotelPerNight = dto.max_budget * 0.1;
+
+    const useAmadeus = this.amadeus.isConfigured();
+
     const results = await Promise.all(
       destinations.map(async (airport) => {
-        const flights = await this.amadeus.searchFlights({
-          originLocationCode: dto.origin_code,
-          destinationLocationCode: airport.code,
-          departureDate: dto.date_from,
-          returnDate: dto.date_to,
-          adults: dto.adults,
-          currencyCode: 'EUR',
-        });
+        let flightCost: number;
+        let hotelPerNight: number;
+        let isEstimate: boolean;
 
-        if (flights.length === 0) return null;
+        if (useAmadeus) {
+          const flights = await this.amadeus.searchFlights({
+            originLocationCode: dto.origin_code,
+            destinationLocationCode: airport.code,
+            departureDate: dto.date_from,
+            returnDate: dto.date_to,
+            adults: dto.adults,
+            currencyCode: 'EUR',
+          });
 
-        const cheapestFlight = flights.reduce((min, f) => {
-          const total = parseFloat(f.price.total);
-          return total < min ? total : min;
-        }, Infinity);
+          if (flights.length === 0) return null;
 
-        const hotels = await this.amadeus.searchHotels({
-          cityCode: airport.code,
-          checkInDate: dto.date_from,
-          checkOutDate: dto.date_to,
-          adults: dto.adults,
-        });
+          flightCost = flights.reduce((min, f) => {
+            const total = parseFloat(f.price.total);
+            return total < min ? total : min;
+          }, Infinity);
 
-        let hotelPerNight = 0;
-        if (hotels.length > 0) {
-          const validOffers = hotels
-            .flatMap((h) => h.offers)
-            .filter((o) => o.price && o.price.total);
-          if (validOffers.length > 0) {
-            const cheapestHotel = validOffers.reduce((min, o) => {
-              const total = parseFloat(o.price.total);
-              return total < min ? total : min;
-            }, Infinity);
-            const from = new Date(dto.date_from);
-            const to = new Date(dto.date_to);
-            const nights = Math.max(
-              1,
-              Math.ceil((to.getTime() - from.getTime()) / 86400000),
-            );
-            hotelPerNight = cheapestHotel / nights;
+          const hotels = await this.amadeus.searchHotels({
+            cityCode: airport.code,
+            checkInDate: dto.date_from,
+            checkOutDate: dto.date_to,
+            adults: dto.adults,
+          });
+
+          hotelPerNight = 0;
+          if (hotels.length > 0) {
+            const validOffers = hotels
+              .flatMap((h) => h.offers)
+              .filter((o) => o.price && o.price.total);
+            if (validOffers.length > 0) {
+              const cheapestHotel = validOffers.reduce((min, o) => {
+                const total = parseFloat(o.price.total);
+                return total < min ? total : min;
+              }, Infinity);
+              hotelPerNight = cheapestHotel / nights;
+            }
           }
+          isEstimate = false;
+        } else {
+          const seed =
+            (airport.code.charCodeAt(0) * 31 + airport.code.charCodeAt(1) * 17 + dto.origin_code.charCodeAt(0) * 13) %
+            100;
+          flightCost = Math.round(maxFlightBudget * 0.4 + (seed / 100) * maxFlightBudget * 0.6);
+          hotelPerNight = Math.round(maxHotelPerNight * 0.4 + (seed / 100) * maxHotelPerNight * 0.6);
+          isEstimate = true;
         }
 
-        const from = new Date(dto.date_from);
-        const to = new Date(dto.date_to);
-        const nights = Math.max(
-          2,
-          Math.ceil((to.getTime() - from.getTime()) / 86400000),
-        );
-
-        const flightCost = cheapestFlight;
         const hotelTotal = hotelPerNight * nights;
         const totalCost = flightCost + hotelTotal;
-
-        const maxFlightBudget = dto.max_budget * 0.5;
-        const maxHotelPerNight = dto.max_budget * 0.1;
 
         if (
           flightCost > maxFlightBudget ||
@@ -277,11 +286,8 @@ export class TripsService {
           destination_code: airport.code,
           destination: airport.city,
           country: airport.country,
-          image: `https://source.unsplash.com/800x600/?${encodeURIComponent(airport.city.toLowerCase())},travel`,
-          flight_total: parseFloat(cheapestFlight.toFixed(2)),
-          flight_per_adult: parseFloat(
-            (cheapestFlight / dto.adults).toFixed(2),
-          ),
+          image: `https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&h=600&fit=crop&q=80`,
+          flight_estimate: parseFloat(flightCost.toFixed(2)),
           hotel_estimate_per_night: parseFloat(hotelPerNight.toFixed(2)),
           hotel_estimate_total: parseFloat(hotelTotal.toFixed(2)),
           total_estimate: parseFloat(totalCost.toFixed(2)),
@@ -304,8 +310,8 @@ export class TripsService {
             dto.date_to,
             dto.adults,
           ).url,
-          is_estimate: false,
-          source: 'amadeus',
+          is_estimate: isEstimate,
+          source: useAmadeus ? 'amadeus' : 'estimate',
         };
       }),
     );
@@ -315,6 +321,10 @@ export class TripsService {
       .sort((a, b) => a!.total_estimate - b!.total_estimate)
       .slice(0, 8);
 
+    const note = useAmadeus
+      ? 'Precios reales obtenidos de Amadeus API. Los enlaces a Skyscanner y Booking son para referencia.'
+      : 'Precios estimados. Haz clic en los enlaces para ver precios actuales en Skyscanner y Booking.';
+
     return {
       origin: { code: dto.origin_code, city: dto.origin_city },
       search_params: { ...dto, nights: validResults[0]?.nights ?? 0 },
@@ -323,10 +333,11 @@ export class TripsService {
         max_for_hotel_per_night: dto.max_budget * 0.1,
       },
       destinations: validResults,
-      note: 'Precios reales obtenidos de Amadeus API. Los enlaces a Skyscanner y Booking son para referencia.',
+      note,
       api_status: {
         amadeus_connected: this.amadeus.isConfigured(),
-        data_source: 'amadeus',
+        cj_connected: this.cj.isConfigured(),
+        data_source: useAmadeus ? 'amadeus' : 'estimate',
       },
     };
   }
