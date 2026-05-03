@@ -219,7 +219,7 @@ export class DuffelService implements OnModuleInit {
             Accept: 'application/json',
             'Duffel-Version': 'v2',
           },
-          timeout: 20000,
+          timeout: 30000,
         }),
       );
 

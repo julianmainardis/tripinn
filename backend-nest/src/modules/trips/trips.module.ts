@@ -41,6 +41,66 @@ const REGION_PRIORITY: Record<string, string[]> = {
   'Portugal': ['Portugal', 'España', 'Francia', 'Italia', 'Reino Unido', 'Alemania', 'Países Bajos', 'Bélgica', 'Irlanda', 'Grecia', 'Croacia', 'Austria', 'Suiza', 'Dinamarca', 'Suecia', 'Noruega', 'Marruecos', 'Turquía', 'Polonia'],
 };
 
+const HOTEL_CATEGORIES: Record<string, { perNightPerPerson: number }> = {
+  BUDGET: { perNightPerPerson: 35 },
+  MEDIUM: { perNightPerPerson: 55 },
+  EXPENSIVE: { perNightPerPerson: 85 },
+};
+
+const HOTEL_PRICES: Record<string, number> = {
+  'BUD': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'PRG': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'OPO': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'LIS': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'RAK': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'CMN': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'ATH': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'SKG': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'WAW': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'KRK': HOTEL_CATEGORIES.BUDGET.perNightPerPerson,
+  'DBV': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'SPU': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'ZAG': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'BCN': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'NAP': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'VCE': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'FCO': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'MXP': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'MAD': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'AGP': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'VLC': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'ALC': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'PMI': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'BIO': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'SVQ': HOTEL_CATEGORIES.MEDIUM.perNightPerPerson,
+  'CDG': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'ORY': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'AMS': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'ZRH': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'GVA': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'LHR': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'LGW': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'STN': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'BER': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'MUC': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'FRA': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'CPH': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'ARN': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'OSL': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'HEL': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'BRU': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'VIE': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'DUB': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'NCE': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'MRS': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'IST': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+  'TLV': HOTEL_CATEGORIES.EXPENSIVE.perNightPerPerson,
+};
+
+function getHotelPricePerNight(code: string, adults: number): number {
+  return (HOTEL_PRICES[code] ?? HOTEL_CATEGORIES.MEDIUM.perNightPerPerson) * adults;
+}
+
 const POPULAR_DESTINATIONS = [
   'MAD', 'BCN', 'PMI', 'AGP', 'ALC', 'VLC', 'SVQ', 'BIO', 'LIS', 'OPO',
   'CDG', 'ORY', 'FCO', 'MXP', 'VCE', 'NAP', 'AMS', 'BRU', 'LHR', 'LGW',
@@ -64,6 +124,7 @@ export class TripsService implements OnModuleInit {
   private readonly MAX_FLIGHT_BUDGET_PCT = 0.3;
   private readonly MAX_HOTEL_BUDGET_PCT = 0.1;
   private readonly MAX_DESTINATIONS = 5;
+  private readonly CANDIDATE_COUNT = 30;
   private cachedAirports: Airport[] = [];
 
   constructor(
@@ -170,7 +231,14 @@ export class TripsService implements OnModuleInit {
 
   private getRelevantDestinations(originCode: string): Airport[] {
     const origin = this.cachedAirports.find((a) => a.code === originCode);
-    if (!origin) return this.cachedAirports.slice(0, this.MAX_DESTINATIONS);
+    if (!origin) {
+      const seen = new Set<string>();
+      return this.cachedAirports.filter((a) => {
+        if (seen.has(a.code)) return false;
+        seen.add(a.code);
+        return true;
+      }).slice(0, this.CANDIDATE_COUNT);
+    }
 
     const priorities = REGION_PRIORITY[origin.country] ?? [];
     const sorted = [...this.cachedAirports].sort((a, b) => {
@@ -192,9 +260,13 @@ export class TripsService implements OnModuleInit {
       return 0;
     });
 
-    return sorted
-      .filter((a) => a.code !== originCode)
-      .slice(0, this.MAX_DESTINATIONS);
+    const filtered = sorted.filter((a) => a.code !== originCode);
+    const seen = new Set<string>();
+    return filtered.filter((a) => {
+      if (seen.has(a.code)) return false;
+      seen.add(a.code);
+      return true;
+    }).slice(0, this.CANDIDATE_COUNT);
   }
 
   private generateSkyscannerUrl(
@@ -250,13 +322,13 @@ export class TripsService implements OnModuleInit {
             flightIsReal = false;
           }
 
-          hotelPerNight = Math.round(maxHotelPerNight * 0.5);
+          hotelPerNight = getHotelPricePerNight(airport.code, dto.adults);
         } else {
           const seed =
             (airport.code.charCodeAt(0) * 31 + airport.code.charCodeAt(1) * 17 + dto.origin_code.charCodeAt(0) * 13) %
             100;
           flightCost = Math.round(maxFlightBudget * 0.4 + (seed / 100) * maxFlightBudget * 0.6);
-          hotelPerNight = Math.round(maxHotelPerNight * 0.4 + (seed / 100) * maxHotelPerNight * 0.6);
+          hotelPerNight = getHotelPricePerNight(airport.code, dto.adults);
           flightIsReal = false;
         }
 
@@ -303,27 +375,71 @@ export class TripsService implements OnModuleInit {
 
     const validResults = results
       .filter(Boolean)
-      .sort((a, b) => a!.total_estimate - b!.total_estimate)
-      .slice(0, 8);
+      .sort((a, b) => a!.total_estimate - b!.total_estimate);
 
-    const duffelCount = validResults.filter((r) => r!.source === 'duffel').length;
-    const note = duffelCount > 0
-      ? `Precios reales de vuelos para ${duffelCount}/${validResults.length} destinos. Hoteles con tarifas estimadas. Los enlaces a Skyscanner y Booking son para reservar directamente.`
-      : 'Precios estimados. Haz clic en los enlaces para ver precios actuales en Skyscanner y Booking.';
+    const budgetResult = validResults[0];
+
+    const withinBudget = validResults.filter(
+      (r) => r!.total_estimate <= dto.max_budget,
+    );
+    const recommendedResult = withinBudget.length > 0
+      ? withinBudget[withinBudget.length - 1]
+      : validResults[validResults.length - 1];
+
+    const seen = new Set<string>();
+    if (budgetResult) seen.add(budgetResult!.destination_code);
+    if (recommendedResult) seen.add(recommendedResult!.destination_code);
+
+    const origin = this.cachedAirports.find((a) => a.code === dto.origin_code);
+    const sameRegion = origin ? REGION_PRIORITY[origin.country] ?? [origin.country] : [];
+
+    const intermediateCandidates = validResults
+      .filter((r) => !seen.has(r!.destination_code))
+      .filter((r) => {
+        const mid = (budgetResult!.total_estimate + recommendedResult!.total_estimate) / 2;
+        const diff = r!.total_estimate - mid;
+        return Math.abs(diff) <= mid * 0.35;
+      })
+      .sort((a, b) => {
+        const aInternational = !sameRegion.includes(a!.country) ? 0 : 1;
+        const bInternational = !sameRegion.includes(b!.country) ? 0 : 1;
+        if (aInternational !== bInternational) return aInternational - bInternational;
+        return Math.abs(a!.total_estimate - (budgetResult!.total_estimate + recommendedResult!.total_estimate) / 2)
+          - Math.abs(b!.total_estimate - (budgetResult!.total_estimate + recommendedResult!.total_estimate) / 2);
+      });
+
+    const intermediateResult = intermediateCandidates[0] ?? validResults.find(
+      (r) => !seen.has(r!.destination_code),
+    );
+    if (intermediateResult) seen.add(intermediateResult!.destination_code);
+
+    const tagMap = new Map<string, string>();
+    if (recommendedResult) tagMap.set(recommendedResult!.destination_code, 'recommended');
+    if (budgetResult) tagMap.set(budgetResult!.destination_code, 'budget');
+    if (intermediateResult) tagMap.set(intermediateResult!.destination_code, 'intermediate');
+
+    const finalResults = [recommendedResult, budgetResult, intermediateResult]
+      .filter(Boolean)
+      .map((r) => ({
+        ...r!,
+        tag: tagMap.get(r!.destination_code) ?? 'intermediate',
+      }));
+
+    const note = 'Precios reales de vuelos. Los enlaces te llevan a Skyscanner y Booking para reservar directamente.';
 
     return {
       origin: { code: dto.origin_code, city: dto.origin_city },
-      search_params: { ...dto, nights: validResults[0]?.nights ?? 0 },
+      search_params: { ...dto, nights: finalResults[0]?.nights ?? 0 },
       budget_breakdown: {
         max_for_flights: dto.max_budget * this.MAX_FLIGHT_BUDGET_PCT,
         max_for_hotel_per_night: dto.max_budget * this.MAX_HOTEL_BUDGET_PCT,
       },
-      destinations: validResults,
+      destinations: finalResults,
       note,
       api_status: {
         duffel_connected: this.duffel.isConfigured(),
         cj_connected: this.cj.isConfigured(),
-        data_source: duffelCount > 0 ? 'duffel' : 'estimate',
+        data_source: finalResults.length > 0 && finalResults[0]!.source === 'duffel' ? 'duffel' : 'estimate',
       },
     };
   }

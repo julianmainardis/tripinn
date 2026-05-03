@@ -37,6 +37,7 @@ interface Destination {
   flights_url: string;
   hotels_url: string;
   is_estimate: boolean;
+  tag: 'recommended' | 'budget' | 'intermediate';
 }
 
 interface SearchResult {
@@ -815,31 +816,50 @@ export default function TravelSearchScreen() {
                   <View style={styles.destOverlay} />
                   <View style={styles.destContent}>
                     <View style={styles.destHeader}>
-                      <View>
+                      <View style={{ flex: 1 }}>
                         <Text style={styles.destCity}>{dest.destination}</Text>
                         <Text style={styles.destCountry}>{dest.country}</Text>
                       </View>
-                      {dest.within_budget && dest.savings_estimate > 0 && (
-                        <View style={styles.savingsBadge}>
-                          <Text style={styles.savingsText}>Ahorras {Math.round(dest.savings_estimate)} EUR</Text>
-                        </View>
-                      )}
+                      <View style={styles.badgeRow}>
+                        {dest.tag === 'recommended' && (
+                          <View style={[styles.tagBadge, styles.tagRecommended]}>
+                            <Ionicons name="star" size={12} color={COLORS.textWhite} />
+                            <Text style={styles.tagText}>Recomendado</Text>
+                          </View>
+                        )}
+                        {dest.tag === 'budget' && (
+                          <View style={[styles.tagBadge, styles.tagBudget]}>
+                            <Ionicons name="pricetag" size={12} color={COLORS.textWhite} />
+                            <Text style={styles.tagText}>Económico</Text>
+                          </View>
+                        )}
+                        {dest.tag === 'intermediate' && (
+                          <View style={[styles.tagBadge, styles.tagIntermediate]}>
+                            <Ionicons name="pulse" size={12} color={COLORS.textWhite} />
+                            <Text style={styles.tagText}>Equilibrado</Text>
+                          </View>
+                        )}
+                        {dest.within_budget && dest.savings_estimate > 0 && (
+                          <View style={styles.savingsBadge}>
+                            <Text style={styles.savingsText}>-{Math.round(dest.savings_estimate)} EUR</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
 
                     <View style={styles.priceBreakdown}>
-                      <View style={styles.priceItem}>
-                        <Ionicons name="airplane" size={16} color={COLORS.textWhite} />
-                        <Text style={styles.priceLabel}>Vuelos i/v ({dest.adults} pers.)</Text>
-                        <Text style={styles.priceValue}>{Math.round(dest.flight_estimate)} EUR</Text>
-                      </View>
-                      <View style={styles.priceItem}>
-                        <Ionicons name="bed" size={16} color={COLORS.textWhite} />
-                        <Text style={styles.priceLabel}>{dest.nights} noches ({Math.round(dest.hotel_estimate_per_night)} EUR/noche)</Text>
-                        <Text style={styles.priceValue}>{Math.round(dest.hotel_estimate_total)} EUR</Text>
-                      </View>
                       <View style={[styles.priceItem, styles.totalPrice]}>
-                        <Text style={styles.totalLabel}>Total estimado</Text>
-                        <Text style={styles.totalValue}>{Math.round(dest.total_estimate)} EUR</Text>
+                        <Text style={styles.totalLabel}>Total aproximado</Text>
+                        <Text style={styles.totalValue}>~{Math.round(dest.total_estimate)} EUR</Text>
+                      </View>
+                      <View style={styles.priceDetails}>
+                        <Text style={styles.priceDetailText}>
+                          ✈️ Vuelo i/v: ~{Math.round(dest.flight_estimate / dest.adults)} EUR/persona
+                        </Text>
+                        <Text style={styles.priceDetailText}>
+                          🛏️ Hotel: ~{Math.round(dest.hotel_estimate_per_night / dest.adults)} EUR/persona/noche
+                        </Text>
+                        <Text style={styles.priceNote}>Precios orientativos. Verificar en Skyscanner y Booking.</Text>
                       </View>
                     </View>
 
@@ -1029,9 +1049,26 @@ const styles = StyleSheet.create({
   destContent: {
     flex: 1, padding: SPACING.md, justifyContent: 'space-between'
   },
-  destHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  destHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: SPACING.sm },
   destCity: { fontSize: FONTS.sizes.xl, fontWeight: FONTS.weights.bold, color: COLORS.textWhite },
   destCountry: { fontSize: FONTS.sizes.sm, color: COLORS.textWhite, opacity: 0.9 },
+  badgeRow: { flexDirection: 'row', gap: SPACING.xs, alignItems: 'center', flexShrink: 1 },
+  tagBadge: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.sm, paddingVertical: 3,
+    borderRadius: BORDER_RADIUS.sm, gap: 3,
+  },
+  tagRecommended: {
+    backgroundColor: '#FFB800',
+  },
+  tagBudget: {
+    backgroundColor: '#2196F3',
+  },
+  tagIntermediate: {
+    backgroundColor: '#FF9800',
+  },
+  tagText: {
+    fontSize: FONTS.sizes.xs, fontWeight: FONTS.weights.bold, color: COLORS.textWhite,
+  },
   savingsBadge: {
     backgroundColor: COLORS.success, paddingHorizontal: SPACING.sm, paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm
@@ -1045,11 +1082,22 @@ const styles = StyleSheet.create({
   priceLabel: { flex: 1, fontSize: FONTS.sizes.sm, color: COLORS.textWhite, marginLeft: SPACING.sm },
   priceValue: { fontSize: FONTS.sizes.sm, fontWeight: FONTS.weights.semibold, color: COLORS.textWhite },
   totalPrice: {
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.3)',
-    paddingTop: SPACING.xs, marginTop: SPACING.xs
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: BORDER_RADIUS.md,
   },
   totalLabel: { flex: 1, fontSize: FONTS.sizes.md, fontWeight: FONTS.weights.semibold, color: COLORS.textWhite },
   totalValue: { fontSize: FONTS.sizes.lg, fontWeight: FONTS.weights.bold, color: COLORS.textWhite },
+  priceDetails: {
+    marginTop: SPACING.sm, paddingHorizontal: SPACING.xs,
+  },
+  priceDetailText: {
+    fontSize: FONTS.sizes.sm, color: COLORS.textWhite, opacity: 0.85,
+    marginBottom: 3,
+  },
+  priceNote: {
+    fontSize: FONTS.sizes.xs, color: COLORS.textWhite, opacity: 0.6, marginTop: SPACING.xs,
+    textAlign: 'center', fontStyle: 'italic',
+  },
 
   // Link buttons
   linkButtonsRow: {
